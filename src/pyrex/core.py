@@ -40,7 +40,7 @@ class Cookware:
    """
    	A class to twist any analytic circular waveforms into eccentric model.
    """
-   def __init__(self,approximant,mass1,mass2,spin1x,spin1y,spin1z,spin2x,spin2y,spin2z,eccentricity,x,varphi,inclination,distance,coa_phase,sample_rate=4096.):
+   def __init__(self,approximant,mass1,mass2,spin1x,spin1y,spin1z,spin2x,spin2y,spin2z,eccentricity,x,inclination,distance,coa_phase,sample_rate=4096.,varphi=None):
         """
             Initiates Cookware class for non-spinning, low eccentricity, and mass ratio<=3 binaries.
 
@@ -184,8 +184,9 @@ class Cookware:
         #A_amp,B_amp,freq_amp,phi_amp=Cookware.interpol_key_quant(training_quant,par_amp,test_quant)
         A_omega,B_omega,freq_omega,phi_omega=Cookware.interpol_key_quant(training_quant,eomg,test_quant)
         A_amp,B_amp,freq_amp,phi_amp=Cookware.interpol_key_quant(training_quant,eamp,test_quant)
-        phi_omega=self.varphi[1]
-        phi_amp=self.varphi[0]
+        if self.varphi:
+            phi_omega=self.varphi[1]
+            phi_amp=self.varphi[0]
         self.omega_keys=[A_omega,B_omega,freq_omega,phi_omega]
         self.amp_keys=[A_amp,B_amp,freq_amp,phi_amp]
 
