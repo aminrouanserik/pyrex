@@ -1,28 +1,23 @@
-# pyrex
+# Pyrex
 
 [![DOI](https://zenodo.org/badge/246883158.svg)](https://zenodo.org/badge/latestdoi/246883158)
 
 ## Description
-Python package for transforming circular gravitational waveforms to low-exentric waveforms from numerical simulations.
+Python package for transforming circular gravitational waveforms to low-eccentric waveforms from numerical simulations.
 
-See [10.1103/PhysRevD.103.124011](10.1103/PhysRevD.103.124011) or [arXiv:2101.11033](https://arxiv.org/abs/2101.11033) for details of the model and citation.
+Original implementation by **Yoshinta Setyawati (2021)**.  
+Modified and maintained by **Amin Rouan Serik (2025)** to support modern Python packaging and enhancements.
 
-Copyright (C) Yoshinta Setyawati, 2021.
+See [Phys. Rev. D 103, 124011](https://doi.org/10.1103/PhysRevD.103.124011) or [arXiv:2101.11033](https://arxiv.org/abs/2101.11033) for details of the model and citation.
 
+---
 
-## Installation: 
-    git clone git@github.com:Yoshinta/pyrex.git
-    cd pyrex
-    pip install -e.
-# pyrex
+## Installation
 
-[![DOI](https://zenodo.org/badge/246883158.svg)](https://zenodo.org/badge/latestdoi/246883158)
+Using `pip` with editable install from your repository (compatible with `pyproject.toml`):
 
-## Description
-Python package for transforming circular gravitational waveforms to low-exentric waveforms from numerical simulations.
-
-
-## Installation: 
-    git clone git@github.com:Yoshinta/pyrex.git
-    cd pyrex
-    pip install -e.
+```bash
+git clone git@github.com:aminrouanserik/pyrex.git
+cd pyrex
+pip install -e .
+```
