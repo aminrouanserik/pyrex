@@ -100,7 +100,7 @@ class Glassware(object):
                         The maximum amplitude before alignment.
        """
 
-        time,amp,phase,h22=t_align(self.names,self.data_path)
+        time,amp,phase,h22=t_align(self.names)
         self.time=time
         self.amp=amp
         self.phase=phase
@@ -109,7 +109,7 @@ class Glassware(object):
         omega=[]
         for i in range(len(self.time)):
             omega.append(compute_omega(self.time[i],self.h22[i]))
-        self.omega=asarray(omega)
+        self.omega=asarray(omega, dtype=object)
 
 
    def check_double_circ(self):

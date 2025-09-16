@@ -44,40 +44,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-# def get_components(data_path):
-#      """
-#         Get amplitude, phase, and strain of the l=2, m=2 mode from a numerical simulation.
-
-#         Parameters
-#         ----------
-#         data_path : {str}
-# 		  The directory of an NR file that contains 'rhOverM_Asymptotic_GeometricUnits_CoM.h5'.
-
-#         Returns
-#         ------
-#         times     : []
-# 		          Array of the sample time.
-#         amp22	  : []
-# 		          Array of the amplitude of the l=2, m=2 mode.
-# 	    phase22   : []
-# 		          Array of the phase of the l=e, m=e mode.
-# 	    h22       : []
-# 		          Array of the l=2, m=2 strain.
-#     """
-#      with h5py.File(os.path.join(data_path, "rhOverM_Asymptotic_GeometricUnits_CoM.h5" ), 'r') as f:
-#          h22 = f["OutermostExtraction.dir/Y_l2_m2.dat"][:]
-#          h2m2 = f["OutermostExtraction.dir/Y_l2_m-2.dat"][:]
-
-#      times = h22[:,0]
-#      for t1, t2 in zip(times, h2m2[:,0]):
-#          assert t1 == t2
-
-#      h22 = h22[:,1] + 1.j * h22[:,2]
-#      h2m2 = h2m2[:,1] + 1.j * h2m2[:,2]
-#      amp22=abs(h22)
-#      phase22 = -unwrap(angle(h22))
-#      return times,amp22,phase22,h22
-
 def get_components(name):
     sim = sxs.load(name, ignore_deprecation=True, extrapolation="Outer").h
 
@@ -88,7 +54,7 @@ def get_components(name):
 
     return times, amp22, phase22, h22
 
-def t_align(names,data_path,dt=0.4,t_junk=250.,t_circ=-29.):
+def t_align(names, dt=0.4, t_junk=250., t_circ=-29.):
     """
         Align waveform such that the peak amplitude is at t=0 and chopped -29M before merger (max t).
         Modify the delta t of every waveform with the same number.
@@ -122,8 +88,8 @@ def t_align(names,data_path,dt=0.4,t_junk=250.,t_circ=-29.):
     new_time=[]
     time_window=[]
 
-    for i in range(len(names)):
-        temp_time,temp_amp,temp_phase,temp_h22=get_components(names[i])
+    for name in names:
+        temp_time,temp_amp,temp_phase,temp_h22=get_components(name)
         timeshift=temp_time-temp_time[argmax(temp_amp)]
         shifted_time=arange(timeshift[0],timeshift[::-1][0],dt)
 
@@ -143,9 +109,9 @@ def t_align(names,data_path,dt=0.4,t_junk=250.,t_circ=-29.):
         time_window.append(shifted_time[array_early_inspiral:array_late_inspiral])
         amp_window.append(amp[array_early_inspiral:array_late_inspiral])
         h22_window.append(h22r[array_early_inspiral:array_late_inspiral]+1j*h22i[array_early_inspiral:array_late_inspiral])
-        phase_window.append(-unwrap(angle(h22_window[i])))
-        
-    return asarray(time_window), asarray(amp_window), asarray(phase_window), asarray(h22_window)
+        phase_window.append(-unwrap(angle(h22_window[-1])))
+
+    return asarray(time_window, dtype=object), asarray(amp_window, dtype=object), asarray(phase_window, dtype=object), asarray(h22_window, dtype=object)
 
 def compute_omega(time_sample,hlm):
     """
