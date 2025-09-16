@@ -30,6 +30,7 @@
 __author__ = 'Yoshinta Setyawati'
 
 from numpy import *
+import numpy as np
 import h5py
 import pickle
 import glob
@@ -335,12 +336,12 @@ def sanity_modes(t22,amp22_model,phase22_model,h22_model,t2_2,amp2_2_model,phase
         newh=interp_h_real(newtime)+interp_h_imag(newtime)*1j
         return newamp,newphase,newh
 
-    if len(t22)!=len(t2_2):
-        tbegin=max(t22[0],t2_2[0])
-        tfinal=min(t22[::-1][0],t2_2[::-1][0])
-        deltat=min(abs(t22[1]-t22[0]),abs(t2_2[1]-t2_2[0]))
-        t_join=arange(tbegin,tfinal,deltat)
-        amp22_model,phase22_model,h22_model=interpolate_data(t22,t_join,amp22_model,phase22_model,h22_model)
+    if len(t22) != len(t2_2):
+        tbegin = np.max((t22[0], t2_2[0]))
+        tfinal = np.min((t22[::-1][0], t2_2[::-1][0]))
+        deltat = np.min((np.abs(t22[1] - t22[0]), np.abs(t2_2[1] - t2_2[0])))
+        t_join = np.arange(tbegin, tfinal, deltat)
+        amp22_model, phase22_model, h22_model = interpolate_data(t22, t_join, amp22_model, phase22_model, h22_model)
         #elif len(t_join)!=len(t2_2):
         amp2_2_model,phase2_2_model,h2_2_model=interpolate_data(t2_2,t_join,amp2_2_model,phase2_2_model,h2_2_model)
     else:
