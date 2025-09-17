@@ -230,7 +230,7 @@ def find_locals(data,local_min=True,sfilter=True):
                     1 dimensional array of local minima/maxima from a given function.
 
     """
-    if filter:
+    if sfilter:
         new_data = savgol_filter(data, 501, 2)
     else:
         new_data=data
@@ -318,121 +318,6 @@ def compute_residual(time_sample,component,deg=4):
     res=B_t-B_sec
 
     return res, B_sec
-
-def _find_e_amp(ampli,ampli_circular,time,time_circular):
-    #TODO: delete this function
-    """
-        Computes eccentricity from a set of amplitude data.
-
-        Parameters
-        ----------
-        ampli            : []
-        1 dimensional array of ampli data.
-        ampli_circular   : []
-        1 dimensional array of ampli for zero eccentricity data.
-        time            : []
-        1 dimensional array of time samples of the corresponding ampli data.
-        time_circular   : []
-        1 dimensional array of time samples of the corresponding ampli_circular data.
-
-
-        Returns
-        ------
-        e_ampli           : []
-        1 dimensional array of e_ampli.
-
-        """
-
-    ampli_c_interp=interp_omega(time_circular,time,ampli_circular)
-    e_ampli=(ampli-ampli_c_interp)/(2*ampli_c_interp)
-    return e_ampli
-
-
-def _find_e_omega(omega,omega_circular,time,time_circular):
-    #TODO: delete this function
-    """
-        Computes eccentricity from omega (e_omega) from a set of omega data.
-
-        Parameters
-        ----------
-        omega            : []
-                        1 dimensional array of omega data.
-        omega_circular   : []
-                        1 dimensional array of omega for zero eccentricity data.
-        time            : []
-                        1 dimensional array of time samples of the corresponding omega data.
-        time_circular   : []
-                        1 dimensional array of time samples of the corresponding omega_circular data.
-
-
-        Returns
-        ------
-        e_omg           : []
-                        1 dimensional array of e_omega.
-
-    """
-
-    omega_c_interp=interp_omega(time_circular,time,omega_circular)
-    e_omg=(omega-omega_c_interp)/(2*(omega_c_interp))
-    return e_omg
-
-def _measure_e_amp(time,ampli,time_circular,amp_circular):
-    """
-        Computes the eccentricity from amplitude.
-
-        Parameters
-        ----------
-        time             : []
-        Arrays of time samples.
-        ampli            : []
-        Arrays of the amplitude.
-        time_circular    : []
-        1 dimensional array to of time samples in circular eccentricity.
-        amp_circular   : []
-        1 dimensional array to of amp in circular eccentricity.
-
-
-        Returns
-        ------
-        e_omg   : []
-        Array of eccenntricity omega as time function.
-
-        """
-
-    e_amp=[]
-    for i in range(len(time)):
-        e_amp.append(find_e_amp(ampli,amp_circular,time_circular,time[i]))
-    return e_amp
-
-def _measure_e_omega(time,h22,time_circular,h22_circular):
-    """
-        Computes the eccentricity from omega (see Husa08).
-
-        Parameters
-        ----------
-        time             : []
-                         Arrays of time samples.
-        h22              : []
-                         Arrays of the strain.
-        time_circular    : []
-                         1 dimensional array to of time samples in circular eccentricity.
-        h22_circular   : []
-                         1 dimensional array to of h22 in circular eccentricity.
-
-
-        Returns
-        ------
-        e_omg   : []
-                Array of eccentricity omega as time function.
-
-    """
-
-    e_omg=[]
-    for i in range(len(time)):
-        omega_circular=compute_omega(time_circular,h22_circular)
-        omega_high_e=compute_omega(time[i],h22[i])
-        e_omg.append(find_e_omega(omega_high_e,omega_circular,time_circular,time[i]))
-    return e_omg
 
 def time_window_greater(time,time_point,data):
     """
