@@ -40,7 +40,7 @@ class Glassware(object):
    """
    	A class to measure the eccentricity of a given NR waveform.
    """
-   def __init__(self,q,chi,data_path,names,e_ref,outfname="../data/pyrexdata.pkl",nr=True):
+   def __init__(self, q, chi, names, e_ref, outfname = None):
         """
             Initiates Glassware class for non-spinning, low eccentricity, and mass ratio<=3 binaries.
 
@@ -50,14 +50,10 @@ class Glassware(object):
             		  Mass ratio.
             chi         : {float}
                       Dimensionless spin parameters.
-            data_path   : {str}
-                      Directory of the NR simulations.
             names       : []
                       Simulation names.
             e_ref       : []
                       e at the reference frequency ('e_comm').
-            nr          : {}
-                      Data type. Default nr=True.
 
             Returns
             ------
@@ -75,7 +71,6 @@ class Glassware(object):
             if all(i >= 1. for i in q) and all(i <= 3. for i in q):
                 self.q=q
                 self.chi=chi
-                self.data_path=data_path
                 self.names=names
                 self.e_ref=e_ref
             else:
@@ -86,9 +81,11 @@ class Glassware(object):
         self.compute_e_estimator()
         self.fit_model()
         self.compute_xquant()
+
         #write and store the data
         data_dict=self.__dict__
-        write_pkl(outfname,data_dict)
+        if outfname:
+            write_pkl(outfname,data_dict)
 
    def components(self):
         """
