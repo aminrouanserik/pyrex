@@ -92,7 +92,7 @@ class Cookware:
 
 #check requirements
         self.checkParBoundaris()
-        training=checkIfFilesExist(message="training data found: ")
+        training=checkIfFilesExist()
 #generate analytic waveform
         laltime,lalamp,lalphase,lalomega=lalwaves_to_nr_scale(q,total_mass,self.approximant,f_low,self.distance,self.inclination,self.coa_phase,sample_rate)
         newtime=laltime#training_dict['new_time']
