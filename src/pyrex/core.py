@@ -105,7 +105,7 @@ class Cookware:
         self.x = x
         self.varphi = varphi
 
-        total_mass = 50.0
+        total_mass = mass1 + mass2
         f_low = 25.0
         q = mass1 / mass2
 

@@ -514,7 +514,7 @@ def lalwaves_to_nr_scale(
         h22 = H22
         omegal2m2 = compute_omega(time, h22)
         omegal2m_2 = zeros(len(h2_2))
-    elif Y22 < 1 - 4 and Y2_2 > Y22:
+    elif Y22 < 1e-4 and Y2_2 > Y22:
         h22 = zeros(len(H2_2))
         h2_2 = H2_2
         omegal2m2 = zeros(len(h22))
