@@ -572,9 +572,13 @@ def eccentric_from_circular(
         )
         fit_ex_amp = f_sin(x_amp, par_amp[0], par_amp[1], par_amp[2], par_amp[3])
         omega_rec = fit_ex_omega * 2 * omega_circ + omega_circ
+
+        mask = np.isfinite(omega_rec)
+        omega_rec = np.interp(new_time, new_time[mask], omega_rec[mask])
+
         phase_rec = integrate.cumulative_trapezoid(omega_rec, new_time, initial=0)
         amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
-        mask = isfinite(amp_rec)
+        mask = np.isfinite(amp_rec)
         amp_rec = amp_rec[mask]
         phase_rec = phase_rec[mask]
         new_time = new_time[mask]

@@ -88,7 +88,6 @@ class Cookware:
         h22	          : []
                      Complex numbers of the eccentric l=2, m=2 mode.
         """
-        # TODO: run database.py
         self.approximant = approximant
         self.mass1 = mass1
         self.mass2 = mass2
@@ -105,7 +104,9 @@ class Cookware:
         self.x = x
         self.varphi = varphi
 
-        total_mass = mass1 + mass2
+        total_mass = (
+            mass1 + mass2  # Gave errors added code to fix but worked unreliably
+        )
         f_low = 25.0
         q = mass1 / mass2
 
@@ -128,9 +129,8 @@ class Cookware:
         Y2_2 = find_Y2minus2(self.inclination, self.coa_phase)
         training_dict = read_pkl(training)
         self.get_key_quant(training_dict)
-        # read training file
+
         if eccentricity > 3e-2:
-            # TODO: perform the twis
             t22, amp22_model, phase22_model, h22_model = Cookware.construct(
                 self, newtime, laltime, lalamp[0], lalphase[0], lalomega[0], Y22
             )
