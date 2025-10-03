@@ -1,41 +1,8 @@
-# Copyright (C) 2020 Yoshinta Setyawati <yoshintaes@gmail.com>
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 3 of the License, or (at your
-# option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-# Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
-
-#
-# =============================================================================
-#
-#                                   Preamble
-#
-# =============================================================================
-#
-
-"""
-Read numerical waveforms and measure their eccentricity.
-"""
-
-__author__ = "Yoshinta Setyawati"
-
-from numpy import *
 import numpy as np
-from pyrex.decor import *
-from pyrex.tools import *
-from pyrex.basics import *
+from pyrex.tools import fitting_eccentric_function, find_x
+from pyrex.basics import write_pkl, checkIfDuplicates
 from scipy.signal import savgol_filter
-from scipy.interpolate import InterpolatedUnivariateSpline as spline
+from scipy.interpolate import make_interp_spline
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
 
@@ -78,9 +45,9 @@ class Glassware(object):
                 self.names = names
                 self.e_ref = e_ref
             else:
-                error("Please correct your mass ratio, only for q<=3.")
+                raise ValueError("Please correct your mass ratio, only for q<=3.")
         else:
-            error(
+            raise ValueError(
                 "Please correct your spin, only for the non-spinning binaries, s1x=s1y=s1z=s2x=s2y=s2z=0."
             )
         self.components()
@@ -133,13 +100,13 @@ class Glassware(object):
                 circ_omega.append(self.omega[i])
                 circ_time.append(self.time[i])
         if checkIfDuplicates(circ_q):
-            error(
+            raise ValueError(
                 "Please check duplicates of mass ratio and eccentricity in the provided circular waveforms."
             )
         else:
             for j in range(len(self.q)):
                 if self.q[j] not in circ_q:
-                    error(
+                    raise ValueError(
                         '"Simulation name {} has no circular waveform with the same mass ratio"'.format(
                             self.names[j]
                         )
@@ -153,9 +120,9 @@ class Glassware(object):
 
         eX = []
         for i in range(len(circ_q)):
-            circs = spline(circ_time[i], circ[i])
+            circs = make_interp_spline(circ_time[i], circ[i])
             for j in range(len(self.q)):
-                ecc = spline(self.time[j], component[j])
+                ecc = make_interp_spline(self.time[j], component[j])
                 if self.q[j] == circ_q[i]:
                     eX_filter = (ecc(new_time) - circs(new_time)) / (
                         2.0 * circs(new_time)
@@ -183,7 +150,7 @@ class Glassware(object):
         end_tm = -29  # -31
         len_tm = 15221
         # dt=0.09664644309623327
-        new_time = linspace(begin_tm, end_tm, len_tm)  # arange(begin_tm,end_tm,dt)
+        new_time = np.linspace(begin_tm, end_tm, len_tm)  # arange(begin_tm,end_tm,dt)
 
         circ_names, circ_q, circ_time, circ_amp, circ_phase, circ_omega = (
             Glassware.check_double_circ(self)
@@ -200,8 +167,8 @@ class Glassware(object):
         self.new_time = new_time
 
     def fit_model(self):
-        phase_params = zeros((len(self.names), 4))
-        amp_params = zeros((len(self.names), 4))
+        phase_params = np.zeros((len(self.names), 4))
+        amp_params = np.zeros((len(self.names), 4))
         fit_phase = []
         fit_amp = []
 
@@ -210,8 +177,8 @@ class Glassware(object):
         )
 
         for i in range(len(circ_omega)):
-            interp_omega_c = spline(circ_time[i], circ_omega[i])
-            interp_amp_c = spline(circ_time[i], circ_amp[i])
+            interp_omega_c = make_interp_spline(circ_time[i], circ_omega[i])
+            interp_amp_c = make_interp_spline(circ_time[i], circ_amp[i])
             for j in range(len(self.names)):
                 if self.q[j] == circ_q[i]:
                     phase_params[j], fit_phaser = fitting_eccentric_function(

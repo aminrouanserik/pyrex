@@ -1,42 +1,8 @@
-# Copyright (C) 2020 Yoshinta Setyawati <yoshintaes@gmail.com>
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 3 of the License, or (at your
-# option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-# Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
-
-#
-# =============================================================================
-#
-#                                   Preamble
-#
-# =============================================================================
-#
-
-"""
-Twist analytic circular waveforms into eccentric.
-"""
-
-__author__ = "Yoshinta Setyawati"
-
-from numpy import *
 import numpy as np
-from pyrex.decor import *
-from pyrex.tools import *
-from pyrex.basics import *
-from scipy.interpolate import InterpolatedUnivariateSpline as spline
+from pyrex.tools import near_merger, smooth_joint, get_noncirc_params, f_sin
+from pyrex.basics import interp1D, checkIfFilesExist, read_pkl
+from scipy.interpolate import make_interp_spline
 from scipy import integrate
-
 from qcextender.waveform import Waveform
 from qcextender import units
 
@@ -145,26 +111,28 @@ class Cookware:
     @staticmethod
     def checkEccentricInp(eccentricity):
         if eccentricity < 0.0 or (eccentricity > 0.2 and eccentricity < 1.0):
-            warning("This version has only been calibrated up to eccentricity<0.2.")
+            print("This version has only been calibrated up to eccentricity<0.2.")
         elif eccentricity >= 1.0:
-            error("Change eccentricity value (e<1)!")
+            raise ValueError("Change eccentricity value (e<1)!")
         else:
             pass
 
     def checkParBoundaris(self):
-        chi1 = sqrt(self.spin1x**2 + self.spin1y**2 + self.spin1z**2)
-        chi2 = sqrt(self.spin2x**2 + self.spin2y**2 + self.spin2z**2)
+        chi1 = np.sqrt(self.spin1x**2 + self.spin1y**2 + self.spin1z**2)
+        chi2 = np.sqrt(self.spin2x**2 + self.spin2y**2 + self.spin2z**2)
         if abs(chi1) == 0.0 and abs(chi2) == 0.0:
             self.q = self.mass1 / self.mass2
             if self.q >= 1 and self.q <= 3:
                 Cookware.checkEccentricInp(self.eccentricity)
             elif self.q > 3:
-                warning("This version has only been calibrated up to q<=3.")
+                print("This version has only been calibrated up to q<=3.")
                 Cookware.checkEccentricInp(self.eccentricity)
             else:
-                error("Please correct your mass ratio, only for q>=1.")
+                raise ValueError("Please correct your mass ratio, only for q>=1.")
         else:
-            error("This version has only been calibrated to non-spinning binaries.")
+            raise ValueError(
+                "This version has only been calibrated to non-spinning binaries."
+            )
 
     @staticmethod
     def interpol_key_quant(training_quant, training_keys, test_quant):
@@ -173,33 +141,35 @@ class Cookware:
         """
         forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
         A = float(
-            interp1D(training_quant[1], abs(asarray(training_keys[0])), test_quant[1])
+            interp1D(
+                training_quant[1], abs(np.asarray(training_keys[0])), test_quant[1]
+            )
         )
-        B = log(
+        B = np.log(
             (
                 interp1D(
                     training_quant[1],
-                    training_keys[0] * exp(training_keys[1]),
+                    training_keys[0] * np.exp(training_keys[1]),
                     test_quant[1],
                 )
             )
-            / asarray(forA)
+            / np.asarray(forA)
         )
-        freq = sqrt(
+        freq = np.sqrt(
             1.0
             / (
                 interp1D(
-                    asarray(training_quant[0]),
-                    1.0 / asarray(training_keys[2]) ** 2,
+                    np.asarray(training_quant[0]),
+                    1.0 / np.asarray(training_keys[2]) ** 2,
                     test_quant[0],
                 )
             )
         )
         phi = float(
             interp1D(
-                asarray(training_quant[2]),
-                asarray(training_keys[3]),
-                asarray(test_quant[2]),
+                np.asarray(training_quant[2]),
+                np.asarray(training_keys[3]),
+                np.asarray(test_quant[2]),
             )
         )
 
@@ -235,12 +205,7 @@ class Cookware:
         amp_construct = np.concatenate((amp_rec, late_amp))
         phase_construct = np.concatenate((phase_rec, late_phase))
 
-        # timescale = (self.mass1 + self.mass2) * lal.MTSUN_SI
-        # amp_scale = NR_amp_scale((self.mass1 + self.mass2), self.distance)
-
-        h_model = amp_construct * exp(phase_construct * 1j)  # * (
-        #     amp_scale * spherical_harmonics(2, 2, 0, 0)
-        # )
+        h_model = amp_construct * np.exp(phase_construct * 1j)
 
         amp_model = np.abs(h_model)
         phase_model = np.unwrap(np.angle(h_model))
@@ -249,7 +214,7 @@ class Cookware:
         amp_model = smooth_joint(wave.time, amp_model, wave.metadata.total_mass)
         phase_model = smooth_joint(wave.time, phase_model, wave.metadata.total_mass)
 
-        h_model = amp_model * exp(phase_model * 1j)
+        h_model = amp_model * np.exp(phase_model * 1j)
         print(phase_model, amp_model)
         return phase_model, amp_model
 
@@ -266,14 +231,14 @@ def eccentric_from_circular(
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
 
     dt = units.tSI_to_tM(wave.metadata.delta_t, wave.metadata.total_mass)
-    ntime = arange(time[0], -29.0, dt)
+    ntime = np.arange(time[0], -29.0, dt)
     if max(abs(omega)) == 0:
         new_time = ntime
-        amp_rec = zeros(len(new_time))
-        phase_rec = zeros(len(new_time))
+        amp_rec = np.zeros(len(new_time))
+        phase_rec = np.zeros(len(new_time))
     else:
-        interp_omega = spline(time, omega)
-        interp_amp = spline(time, amp)
+        interp_omega = make_interp_spline(time, omega)
+        interp_amp = make_interp_spline(time, amp)
 
         new_time = ntime
 
@@ -282,8 +247,10 @@ def eccentric_from_circular(
         shift_omega = -interp_omega(-1500)
         shift_amp = interp_amp(-1500)
 
-        x_omega = nan_to_num((-omega_circ) ** phase_pwr - (-shift_omega) ** phase_pwr)
-        x_amp = nan_to_num((amp_circ) ** amp_pwr - shift_amp**amp_pwr)
+        x_omega = np.nan_to_num(
+            (-omega_circ) ** phase_pwr - (-shift_omega) ** phase_pwr
+        )
+        x_amp = np.nan_to_num((amp_circ) ** amp_pwr - shift_amp**amp_pwr)
 
         fit_ex_omega = f_sin(
             x_omega, par_omega[0], par_omega[1], par_omega[2], par_omega[3]
@@ -300,12 +267,14 @@ def eccentric_from_circular(
         amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
 
         amp_mask = np.isfinite(amp_rec)
-        amp_rec = spline(new_time[amp_mask], amp_rec[amp_mask])(new_time)
+        amp_rec = make_interp_spline(new_time[amp_mask], amp_rec[amp_mask])(new_time)
         amp_rec = units.mM_to_mSI(
             amp_rec, wave.metadata.total_mass, wave.metadata.distance
         )
 
         phase_mask = np.isfinite(phase_rec)
-        phase_rec = spline(new_time[phase_mask], phase_rec[phase_mask])(new_time)
+        phase_rec = make_interp_spline(new_time[phase_mask], phase_rec[phase_mask])(
+            new_time
+        )
         new_time = units.tM_to_tSI(new_time, wave.metadata.total_mass)
     return new_time, amp_rec, phase_rec
