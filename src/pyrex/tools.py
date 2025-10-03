@@ -40,8 +40,9 @@ from pyrex.basics import *
 from scipy.optimize import curve_fit
 from scipy.signal import argrelextrema, find_peaks, savgol_filter
 from scipy.interpolate import InterpolatedUnivariateSpline as spline
-from scipy import integrate
 import warnings
+from qcextender import units
+from qcextender.utils import spherical_harmonics
 
 warnings.filterwarnings("ignore")
 
@@ -400,189 +401,12 @@ def find_x(old_time, omega, new_time):
     return x
 
 
-def lal_waves(
-    q, total_mass, approximant, f_lower, distance, inclination, coa_phase, **kwargs
-):
-    """
-    Compute time-domain waveform from LAL simulation with a given set of paramater.
-    """
-    m1, m2 = masses_from_q(q, total_mass)
-    spin1x = spin1y = spin1z = spin2x = spin2y = spin2z = 0.0
-    long_asc_nodes = 0.0
-    eccentricity = 0.0
-    mean_per_ano = 0.0
-    f_ref = f_lower
-    f_max = 1 / (6 ** (3 / 2) * np.pi * total_mass * lal.MTSUN_SI)
-    lal_pars = None
-    l = 2
-    m = 2
-    aprox = eval("ls." + str(approximant))
-    if "delta_t" and "delta_f" in kwargs:
-        error("Please provide delta_t or delta_f.")
-    elif "delta_t" in kwargs and "delta_f" not in kwargs:
-        generateTD = ls.SimInspiralTDModesFromPolarizations(
-            m1 * lal.MSUN_SI,
-            m2 * lal.MSUN_SI,
-            spin1x,
-            spin1y,
-            spin1z,
-            spin2x,
-            spin2y,
-            spin2z,
-            distance * 1e6 * lal.PC_SI,
-            coa_phase,
-            long_asc_nodes,
-            eccentricity,
-            mean_per_ano,
-            kwargs["delta_t"],
-            f_lower,
-            f_ref,
-            lal_pars,
-            aprox,
-        )
-        h22lal = ls.SphHarmTimeSeriesGetMode(generateTD, l, m)
-
-        h22 = h22lal.data.data / NR_amp_scale(m1 + m2, distance)
-        h2_2 = ((-1) ** l) * conj(h22)
-
-        Ttot = h22lal.data.length * h22lal.deltaT
-        t1 = arange(h22lal.data.length, dtype=float) * h22lal.deltaT
-        t1 = t1 + h22lal.epoch
-        x = t1 - t1[argmax(abs(h22))]
-
-    elif "delta_f" in kwargs and "delta_t" not in kwargs:
-        hp1, hc1 = ls.SimInspiralChooseFDWaveform(
-            lal.MSUN_SI * m1,
-            lal.MSUN_SI * m2,
-            spin1x,
-            spin1y,
-            spin1z,
-            spin2x,
-            spin2y,
-            spin2z,
-            lal.PC_SI * distance * 1e6,
-            inclination,
-            coa_phase,
-            long_asc_nodes,
-            eccentricity,
-            mean_per_ano,
-            kwargs["delta_f"],
-            f_lower,
-            f_max,
-            f_ref,
-            lal_pars,
-            aprox,
-        )
-        hp = hp1.data.data
-        hc = hc1.data.data
-        # TODO: change with FD get modes
-        h22 = 0
-        h2_2 = 0.0
-        Ftot = hp1.data.length * hp1.deltaF
-        t1 = arange(hp1.data.length, dtype=float) * hp1.deltaF
-        t1 = t1 + hp1.epoch
-        x = t1
-    else:
-        error("Please provide delta_t or delta_f.")
-    return x, h22, h2_2
-
-
 def get_nr_hlm(Hlm, Ylm, amp_scale):
     if Ylm != 0:
         hlm = Hlm / (amp_scale * Ylm)
     else:
         hlm = zeros(len(Hlm))
     return hlm
-
-
-def lalwaves_to_nr_scale(
-    q, total_mass, approximant, f_low, distance, iota, coa_phi, sample_rate
-):
-    dt = 1.0 / sample_rate
-    # Beware: numerical error 1e-30 when return the scale back! More obvious on phase.
-    amp_scale = NR_amp_scale(total_mass, distance)
-    sample_times, H22, H2_2 = lal_waves(
-        q, total_mass, approximant, f_low, distance, iota, coa_phi, delta_t=dt
-    )
-    time = sample_times / (total_mass * lal.MTSUN_SI)
-    # h2=hp+hc*1j
-    Y22 = find_Y22(iota, coa_phi)
-    Y2_2 = find_Y2minus2(iota, coa_phi)
-
-    if Y2_2 < 1e-4 and Y22 > Y2_2:
-        h2_2 = zeros(len(H22))
-        h22 = H22
-        omegal2m2 = compute_omega(time, h22)
-        omegal2m_2 = zeros(len(h2_2))
-    elif Y22 < 1e-4 and Y2_2 > Y22:
-        h22 = zeros(len(H2_2))
-        h2_2 = H2_2
-        omegal2m2 = zeros(len(h22))
-        omegal2m_2 = compute_omega(time, h2_2)
-    else:
-        h22 = H22  # get_nr_hlm(H22,Y22,amp_scale)
-        h2_2 = H2_2  # get_nr_hlm(H2_2,Y2_2,amp_scale)
-        omegal2m2 = compute_omega(time, h22)
-        omegal2m_2 = compute_omega(time, h2_2)
-
-    amp = array([abs(h22), abs(h2_2)])
-    phase = array([unwrap(angle(h22)), unwrap(angle(h2_2))])
-    omega = array([omegal2m2, omegal2m_2])
-    return time, amp, phase, omega
-
-
-def eccentric_from_circular(
-    par_omega,
-    par_amp,
-    new_time,
-    time,
-    amp,
-    phase,
-    omega,
-    phase_pwr=-59.0 / 24,
-    amp_pwr=-83.0 / 24,
-):
-    dt = float(time[501]) - float(time[500])
-    ntime = arange(
-        float(time[500]), -29.0, dt
-    )  # inspace(int(time[100]),-50.4,len(time))
-    if max(abs(omega)) == 0:
-        new_time = ntime
-        amp_rec = zeros(len(new_time))
-        phase_rec = zeros(len(new_time))
-    else:
-        interp_omega = spline(time, omega)
-        interp_amp = spline(time, amp)
-        if (time == new_time).all():
-            new_time = ntime
-            omega_circ = -interp_omega(new_time)
-            amp_circ = interp_amp(new_time)
-            shift_omega = -interp_omega(-1500)
-            shift_amp = interp_amp(-1500)
-        else:
-            omega_circ = -interp_omega(new_time)
-            amp_circ = interp_amp(new_time)
-            shift_omega = omega_circ[0]
-            shift_amp = amp_circ[0]
-        x_omega = nan_to_num((-omega_circ) ** phase_pwr - (-shift_omega) ** phase_pwr)
-        x_amp = nan_to_num((amp_circ) ** amp_pwr - shift_amp**amp_pwr)
-        # print(x_omega)
-        fit_ex_omega = f_sin(
-            x_omega, par_omega[0], par_omega[1], par_omega[2], par_omega[3]
-        )
-        fit_ex_amp = f_sin(x_amp, par_amp[0], par_amp[1], par_amp[2], par_amp[3])
-        omega_rec = fit_ex_omega * 2 * omega_circ + omega_circ
-
-        mask = np.isfinite(omega_rec)
-        omega_rec = np.interp(new_time, new_time[mask], omega_rec[mask])
-
-        phase_rec = integrate.cumulative_trapezoid(omega_rec, new_time, initial=0)
-        amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
-        mask = np.isfinite(amp_rec)
-        amp_rec = amp_rec[mask]
-        phase_rec = phase_rec[mask]
-        new_time = new_time[mask]
-    return new_time, amp_rec, phase_rec
 
 
 def get_noncirc_params(somedict):
@@ -617,13 +441,18 @@ def get_noncirc_params(somedict):
     return ecc_q, ecc_e, ecc_x, par_omega, par_amp
 
 
-def near_merger(time, new_time, amp, phase):
+def near_merger(wave):
 
-    interp_amp = spline(time, amp)
-    interp_phase = spline(time, phase)
-    end_time = int(time[::-1][0])
-    deltat = new_time[1] - new_time[0]
-    near_merger_time = arange(-29.0 + deltat, end_time, deltat)
+    time = wave.time
+    interp_amp = spline(time, wave.amp())
+    interp_phase = spline(time, wave.phase())
+    end_time = time[-1]
+    delta_t = wave.metadata.delta_t
+    near_merger_time = np.arange(
+        units.tM_to_tSI(-29.0, wave.metadata.total_mass) + delta_t,
+        end_time + delta_t,
+        delta_t,
+    )
     new_amp = interp_amp(near_merger_time)
     new_phase = interp_phase(near_merger_time)
     return near_merger_time, new_amp, new_phase
@@ -674,10 +503,7 @@ __all__ = [
     "time_window_greater",
     "noisy_peaks",
     "find_x",
-    "lal_waves",
     "get_nr_hlm",
-    "lalwaves_to_nr_scale",
-    "eccentric_from_circular",
     "get_noncirc_params",
     "near_merger",
     "smooth_joint",

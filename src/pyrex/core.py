@@ -30,10 +30,15 @@ Twist analytic circular waveforms into eccentric.
 __author__ = "Yoshinta Setyawati"
 
 from numpy import *
+import numpy as np
 from pyrex.decor import *
 from pyrex.tools import *
 from pyrex.basics import *
-import lal
+from scipy.interpolate import InterpolatedUnivariateSpline as spline
+from scipy import integrate
+
+from qcextender.waveform import Waveform
+from qcextender import units
 
 
 class Cookware:
@@ -104,103 +109,41 @@ class Cookware:
         self.x = x
         self.varphi = varphi
 
-        total_mass = (
-            mass1 + mass2  # Gave errors added code to fix but worked unreliably
-        )
-        f_low = 25.0
-        q = mass1 / mass2
+        # generate analytic waveform
+        kwargs = {
+            "mass1": mass1,
+            "mass2": mass2,
+            "inclination": inclination,
+            "coa_phase": coa_phase,
+            "delta_t": 1.0 / sample_rate,
+            "f_lower": 20,
+            "f_ref": 25,  # Change to be specific to waveform model used, want to do that in the generation.
+            "distance": distance,
+        }
+        self.wave = Waveform.from_model(approximant, [(2, 2)], **kwargs)
 
         # check requirements
         self.checkParBoundaris()
         training = checkIfFilesExist()
-        # generate analytic waveform
-        laltime, lalamp, lalphase, lalomega = lalwaves_to_nr_scale(
-            q,
-            total_mass,
-            self.approximant,
-            f_low,
-            self.distance,
-            self.inclination,
-            self.coa_phase,
-            sample_rate,
-        )
-        newtime = laltime  # training_dict['new_time']
-        Y22 = find_Y22(self.inclination, self.coa_phase)
-        Y2_2 = find_Y2minus2(self.inclination, self.coa_phase)
+
         training_dict = read_pkl(training)
         self.get_key_quant(training_dict)
 
         if eccentricity > 3e-2:
-            t22, amp22_model, phase22_model, h22_model = Cookware.construct(
-                self, newtime, laltime, lalamp[0], lalphase[0], lalomega[0], Y22
-            )
-            t2_2, amp2_2_model, phase2_2_model, h2_2_model = Cookware.construct(
-                self, newtime, laltime, lalamp[1], lalphase[1], lalomega[1], Y2_2
-            )
-            (
-                t22,
-                amp22_model,
-                phase22_model,
-                h22_model,
-                t2_2,
-                amp2_2_model,
-                phase2_2_model,
-                h2_2_model,
-            ) = sanity_modes(
-                t22,
-                amp22_model,
-                phase22_model,
-                h22_model,
-                t2_2,
-                amp2_2_model,
-                phase2_2_model,
-                h2_2_model,
-            )
-            # rescale with total mass
-            # h22_model=(self.amp*exp(self.phase*1j))*(amp_scale*Y22)
-            # self.time=concatenate((timenew,late_time))*timescale#
-            self.time = t22
-            self.Ylm = dict(Y22=Y22, Y2_2=Y2_2)
-            self.amp = dict(amp22=amp22_model, amp2_2=amp2_2_model)
-            self.phase = dict(phase22=phase22_model, phase2_2=phase2_2_model)
-            strain22 = nan_to_num(real(h22_model) + imag(h22_model) * 1j)
-            strain2_2 = nan_to_num(real(h2_2_model) + imag(h2_2_model) * 1j)
-            self.strain = dict(h22=strain22, h2_2=strain2_2)
-            # self.h22=self.strain['h22']+self.strain['h2_2']
-        # TODO: add circular close to merger
-        else:
-            self.Ylm = dict(Y22=Y22, Y2_2=Y2_2)
-            self.time = laltime * ((self.mass1 + self.mass2) * lal.MTSUN_SI)
-            h22_model = (
-                lalamp[0]
-                * exp(lalphase[0] * 1j)
-                * (
-                    NR_amp_scale(self.mass1 + self.mass2, self.distance)
-                    * self.Ylm["Y22"]
-                )
-            )
-            h2_2_model = (
-                lalamp[1]
-                * exp(lalphase[1] * 1j)
-                * (
-                    NR_amp_scale(self.mass1 + self.mass2, self.distance)
-                    * self.Ylm["Y2_2"]
-                )
+            # phase, amp = self.construct()
+            kwargs = {"omega_keys": self.omega_keys, "amp_keys": self.amp_keys}
+            self.wave.add_eccentricity(
+                self.construct,
+                [(2, 2)],
+                omega_keys=self.omega_keys,
+                amp_keys=self.amp_keys,
             )
 
-            self.amp = dict(amp22=abs(h22_model), amp2_2=abs(h2_2_model))
-            self.phase = dict(
-                phase22=unwrap(angle(h22_model)), phase2_2=unwrap(angle(h2_2_model))
-            )
-
-            strain22 = real(h22_model) - imag(h22_model) * 1j
-            strain2_2 = real(h2_2_model) - imag(h2_2_model) * 1j
-            self.strain = dict(h22=strain22, h2_2=strain2_2)
-        self.h22 = self.strain["h22"] + self.strain["h2_2"]
+            self.time = self.wave.time
+            self.h22 = self.wave[2, 2]
 
     @staticmethod
-    def checkEccentricInp(mass1, mass2, eccentricity):
-        ori_total_mass = mass1 + mass2
+    def checkEccentricInp(eccentricity):
         if eccentricity < 0.0 or (eccentricity > 0.2 and eccentricity < 1.0):
             warning("This version has only been calibrated up to eccentricity<0.2.")
         elif eccentricity >= 1.0:
@@ -214,10 +157,10 @@ class Cookware:
         if abs(chi1) == 0.0 and abs(chi2) == 0.0:
             self.q = self.mass1 / self.mass2
             if self.q >= 1 and self.q <= 3:
-                Cookware.checkEccentricInp(self.mass1, self.mass2, self.eccentricity)
+                Cookware.checkEccentricInp(self.eccentricity)
             elif self.q > 3:
                 warning("This version has only been calibrated up to q<=3.")
-                Cookware.checkEccentricInp(self.mass1, self.mass2, self.eccentricity)
+                Cookware.checkEccentricInp(self.eccentricity)
             else:
                 error("Please correct your mass ratio, only for q>=1.")
         else:
@@ -263,17 +206,13 @@ class Cookware:
         return A, B, freq, phi
 
     def get_key_quant(self, training_dict):
-        # remove circular data training
-        # TODO: compute x
+
         q = self.mass1 / self.mass2
         eq, ee, ex, eomg, eamp = get_noncirc_params(training_dict)
         training_quant = [eq, ee, ex]
-        # training_quant=[training_dict['q'],training_dict['e_ref'],training_dict['x']]
+
         test_quant = [q, self.eccentricity, self.x]
-        # par_omega=[training_dict['A_omega'],training_dict['B_omega'],training_dict['freq_omega'],training_dict['phi_omega']]
-        # par_amp=[training_dict['A_amp'],training_dict['B_amp'],training_dict['freq_amp'],training_dict['phi_amp']]
-        # A_omega,B_omega,freq_omega,phi_omega=Cookware.interpol_key_quant(training_quant,par_omega,test_quant)
-        # A_amp,B_amp,freq_amp,phi_amp=Cookware.interpol_key_quant(training_quant,par_amp,test_quant)
+
         A_omega, B_omega, freq_omega, phi_omega = Cookware.interpol_key_quant(
             training_quant, eomg, test_quant
         )
@@ -287,25 +226,86 @@ class Cookware:
         self.amp_keys = [A_amp, B_amp, freq_amp, phi_amp]
 
     @staticmethod
-    def construct(self, newtime, lmtime, lmamp, lmphase, lmomega, Ylm):
+    def construct(wave, mode, omega_keys, amp_keys):
         timenew, amp_rec, phase_rec = eccentric_from_circular(
-            self.omega_keys, self.amp_keys, newtime, lmtime, lmamp, lmphase, lmomega
+            omega_keys, amp_keys, wave
         )
-        # TODO: define after mass scaling
-        late_time, late_amp, late_phase = near_merger(lmtime, timenew, lmamp, lmphase)
-        amp_construct = concatenate((amp_rec, late_amp))
-        phase_construct = concatenate((phase_rec, late_phase))
-        # TODO:check time scaling
-        timescale = (self.mass1 + self.mass2) * lal.MTSUN_SI
-        amp_scale = NR_amp_scale((self.mass1 + self.mass2), self.distance)
-        # rescale with total mass
-        h_model = (amp_construct * exp(phase_construct * 1j)) * (amp_scale * Ylm)
-        amp_model = abs(h_model)
-        phase_model = unwrap(angle(h_model))
-        time_construct = concatenate((timenew, late_time)) * timescale
-        amp_model = smooth_joint(time_construct, amp_model, (self.mass1 + self.mass2))
-        phase_model = smooth_joint(
-            time_construct, phase_model, (self.mass1 + self.mass2)
-        )
+
+        late_time, late_amp, late_phase = near_merger(wave)
+        amp_construct = np.concatenate((amp_rec, late_amp))
+        phase_construct = np.concatenate((phase_rec, late_phase))
+
+        # timescale = (self.mass1 + self.mass2) * lal.MTSUN_SI
+        # amp_scale = NR_amp_scale((self.mass1 + self.mass2), self.distance)
+
+        h_model = amp_construct * exp(phase_construct * 1j)  # * (
+        #     amp_scale * spherical_harmonics(2, 2, 0, 0)
+        # )
+
+        amp_model = np.abs(h_model)
+        phase_model = np.unwrap(np.angle(h_model))
+        # time_construct = np.concatenate((timenew, late_time))  # * timescale
+
+        amp_model = smooth_joint(wave.time, amp_model, wave.metadata.total_mass)
+        phase_model = smooth_joint(wave.time, phase_model, wave.metadata.total_mass)
+
         h_model = amp_model * exp(phase_model * 1j)
-        return time_construct, amp_model, phase_model, h_model
+        print(phase_model, amp_model)
+        return phase_model, amp_model
+
+
+def eccentric_from_circular(
+    par_omega,
+    par_amp,
+    wave,
+    phase_pwr=-59.0 / 24,
+    amp_pwr=-83.0 / 24,
+):
+    time = units.tSI_to_tM(wave.time, wave.metadata.total_mass)
+    omega = units.fSI_to_fM(wave.omega(), wave.metadata.total_mass)
+    amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
+
+    dt = units.tSI_to_tM(wave.metadata.delta_t, wave.metadata.total_mass)
+    ntime = arange(time[0], -29.0, dt)
+    if max(abs(omega)) == 0:
+        new_time = ntime
+        amp_rec = zeros(len(new_time))
+        phase_rec = zeros(len(new_time))
+    else:
+        interp_omega = spline(time, omega)
+        interp_amp = spline(time, amp)
+
+        new_time = ntime
+
+        omega_circ = -interp_omega(new_time)
+        amp_circ = interp_amp(new_time)
+        shift_omega = -interp_omega(-1500)
+        shift_amp = interp_amp(-1500)
+
+        x_omega = nan_to_num((-omega_circ) ** phase_pwr - (-shift_omega) ** phase_pwr)
+        x_amp = nan_to_num((amp_circ) ** amp_pwr - shift_amp**amp_pwr)
+
+        fit_ex_omega = f_sin(
+            x_omega, par_omega[0], par_omega[1], par_omega[2], par_omega[3]
+        )
+        fit_ex_amp = f_sin(x_amp, par_amp[0], par_amp[1], par_amp[2], par_amp[3])
+        omega_rec = fit_ex_omega * 2 * omega_circ + omega_circ
+
+        mask = np.isfinite(omega_rec)
+        omega_rec = np.interp(new_time, new_time[mask], omega_rec[mask])
+
+        phase_rec = integrate.cumulative_trapezoid(
+            units.fM_to_fSI(omega_rec, wave.metadata.total_mass), new_time, initial=0
+        )
+        amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
+
+        amp_mask = np.isfinite(amp_rec)
+        amp_rec = spline(new_time[amp_mask], amp_rec[amp_mask])(new_time)
+        amp_rec = units.mM_to_mSI(
+            amp_rec, wave.metadata.total_mass, wave.metadata.distance
+        )
+
+        phase_mask = np.isfinite(phase_rec)
+        phase_rec = spline(new_time[phase_mask], phase_rec[phase_mask])(new_time)
+        new_time = units.tM_to_tSI(new_time, wave.metadata.total_mass)
+    return new_time, amp_rec, phase_rec

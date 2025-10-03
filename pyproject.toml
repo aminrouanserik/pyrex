@@ -14,6 +14,7 @@ dependencies = [
     "lalsuite>=7.26.1",
     "pickleshare>=0.7.5",
     "pycbc>=2.9.0",
+    "qcextender",
     "scipy>=1.16.2",
     "sxs>=2025.0.12",
 ]
@@ -24,3 +25,6 @@ pyrex = "pyrex:main"
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+qcextender = { path = "qcextender-0.1.8.tar.gz" }

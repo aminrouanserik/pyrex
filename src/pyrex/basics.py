@@ -42,55 +42,6 @@ import lal
 from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
 
-def read_HDF5(file_dir):
-    """
-    Read an HDF5 file.
-    Parameters
-    ----------
-    file_dir    : The directory of the file.
-
-    Returns
-    ------
-    f           : The read file with keys.
-    """
-    f = h5py.File(file_dir, "r")
-    return f
-
-
-def write_HDF5(outfname, data_dict):
-    """
-    Write an HDF5 file.
-    Parameters
-    ----------
-    outfname  : The directory of the output file.
-    data_dict : The data variables to be written.
-
-    Returns
-    ------
-    The written file with keys in outfname.
-    """
-    fh5 = h5py.File(outfname, "w")
-    for var in data_dict.keys():
-        print(var)
-        try:
-            print(dtype(data_dict[var][0]), var)
-            fh5.create_dataset(var, data=asarray(data_dict[var]))
-        except:
-            print(type(data_dict[var]), var)
-            if type(data_dict[var]) != list:
-                if type(data_dict[var]) != str:
-                    fh5.create_dataset(var, data=asarray(data_dict[var]))
-                else:
-                    asciiList = [n.encode("ascii", "ignore") for n in data_dict[var]]
-                    fh5.create_dataset(var, (len(asciiList), 1), "S10", asciiList)
-            elif type(data_dict[var][0]) == list:
-                fh5.create_dataset(var, data=asarray(data_dict[var]))
-            else:
-                asciiList = [n.encode("ascii", "ignore") for n in data_dict[var]]
-                fh5.create_dataset(var, (len(asciiList), 1), "S10", asciiList)
-    fh5.close()
-
-
 def read_pkl(file_dir):
     """
     Read a pickle file.
@@ -218,7 +169,9 @@ def checkIfDuplicates(listofElems):
     return False
 
 
-def checkIfFilesExist(dirfile="../data/"):
+def checkIfFilesExist(
+    dirfile="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/",
+):
     """
     Check if pickle files exist.
     """
@@ -309,44 +262,6 @@ def check_duplicate_training(trainkey, trainval):
     return newkey, newval
 
 
-def find_Y22(iota, coa_phi):
-    """
-    Compute Y_(2,2) of spherical harmonics waveform.
-    Source: https://arxiv.org/abs/0709.0093.
-    Parameters
-    ----------
-    iota: {float}
-            Inclination angle (rad).
-    phi : {float}
-            Phase of coalescence (rad).
-
-    Returns
-    ------
-    Y_(2,2) : Spherical harmonics of the l=2, m=2 mode.
-    """
-    Y22 = sqrt(5.0 / (64 * pi)) * ((1 + cos(iota)) ** 2) * exp(2 * coa_phi * 1j)
-    return Y22
-
-
-def find_Y2minus2(iota, coa_phi):
-    """
-    Compute Y_(2,-2) of spherical harmonics waveform.
-    Source: https://arxiv.org/abs/0709.0093.
-    Parameters
-    ----------
-    iota: {float}
-            Inclination angle (rad).
-    phi : {float}
-            Phase of coalescence (rad).
-
-    Returns
-    ------
-    Y_(2,-2) : Spherical harmonics of the l=2, m=2 mode.
-    """
-    Y2minus2 = sqrt(5.0 / (64 * pi)) * ((1 - cos(iota)) ** 2) * exp(-2 * coa_phi * 1j)
-    return Y2minus2
-
-
 def NR_amp_scale(total_mass, distance):
     return total_mass * lal.MTSUN_SI * lal.C_SI / (1e6 * distance * lal.PC_SI)
 
@@ -415,8 +330,6 @@ def freqISCO(total_mass):
 
 
 __all__ = [
-    "read_HDF5",
-    "write_HDF5",
     "read_pkl",
     "write_pkl",
     "masses_from_eta",
@@ -427,8 +340,6 @@ __all__ = [
     "checkIfFilesExist",
     "interp1D",
     "check_duplicate_training",
-    "find_Y22",
-    "find_Y2minus2",
     "NR_amp_scale",
     "sanity_modes",
     "freqISCO",
