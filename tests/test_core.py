@@ -28,6 +28,7 @@ std_phenom = {
     "inclination": inclination,
     "distance": distance,
     "coa_phase": coa_phase,
+    "f_lower": 25,
     "x": x,
 }
 std_seob = {
@@ -44,6 +45,7 @@ std_seob = {
     "inclination": inclination,
     "distance": distance,
     "coa_phase": coa_phase,
+    "f_lower": 25,
     "x": x,
 }
 

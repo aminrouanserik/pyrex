@@ -9,6 +9,7 @@ eggs
 *.pyc
 *.ipynb_checkpoints
 .venv/
+*.tar.gz
 
 
 #GitHub

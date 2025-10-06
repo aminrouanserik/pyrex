@@ -163,7 +163,10 @@ def smooth_joint(time, y, total_mass):
     """
 
     tarray = np.where(
-        np.logical_and(time < units.tM_to_tSI(-25), time >= units.tM_to_tSI(-46))
+        np.logical_and(
+            time < units.tM_to_tSI(-25, total_mass),
+            time >= units.tM_to_tSI(-46, total_mass),
+        )
     )
     # tarray=where(np.logical_and(x<-31*total_mass*lal.MTSUN_SI,x>=-80*total_mass*lal.MTSUN_SI))
     first = tarray[0][0]

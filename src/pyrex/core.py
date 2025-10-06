@@ -6,6 +6,8 @@ from scipy import integrate
 from qcextender.waveform import Waveform
 from qcextender import units
 
+import matplotlib.pyplot as plt
+
 
 class Cookware:
     """
@@ -29,6 +31,7 @@ class Cookware:
         distance,
         coa_phase,
         sample_rate=4096.0,
+        f_lower=25,
         varphi=None,
     ):
         """
@@ -82,7 +85,7 @@ class Cookware:
             "inclination": inclination,
             "coa_phase": coa_phase,
             "delta_t": 1.0 / sample_rate,
-            "f_lower": 20,
+            "f_lower": 25,
             "f_ref": 25,  # Change to be specific to waveform model used, want to do that in the generation.
             "distance": distance,
         }
@@ -96,17 +99,16 @@ class Cookware:
         self.get_key_quant(training_dict)
 
         if eccentricity > 3e-2:
-            # phase, amp = self.construct()
             kwargs = {"omega_keys": self.omega_keys, "amp_keys": self.amp_keys}
-            self.wave.add_eccentricity(
+            self.newwave = self.wave.add_eccentricity(
                 self.construct,
                 [(2, 2)],
                 omega_keys=self.omega_keys,
                 amp_keys=self.amp_keys,
             )
 
-            self.time = self.wave.time
-            self.h22 = self.wave[2, 2]
+            self.time = self.newwave.time
+            self.h22 = self.newwave[2, 2]
 
     @staticmethod
     def checkEccentricInp(eccentricity):
@@ -209,14 +211,15 @@ class Cookware:
 
         amp_model = np.abs(h_model)
         phase_model = np.unwrap(np.angle(h_model))
-        # time_construct = np.concatenate((timenew, late_time))  # * timescale
+        time_construct = np.concatenate((timenew, late_time))
 
-        amp_model = smooth_joint(wave.time, amp_model, wave.metadata.total_mass)
-        phase_model = smooth_joint(wave.time, phase_model, wave.metadata.total_mass)
+        amp_model = smooth_joint(time_construct, amp_model, wave.metadata.total_mass)
+        phase_model = smooth_joint(
+            time_construct, phase_model, wave.metadata.total_mass
+        )
 
         h_model = amp_model * np.exp(phase_model * 1j)
-        print(phase_model, amp_model)
-        return phase_model, amp_model
+        return time_construct, phase_model, amp_model
 
 
 def eccentric_from_circular(
@@ -229,52 +232,38 @@ def eccentric_from_circular(
     time = units.tSI_to_tM(wave.time, wave.metadata.total_mass)
     omega = units.fSI_to_fM(wave.omega(), wave.metadata.total_mass)
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
-
     dt = units.tSI_to_tM(wave.metadata.delta_t, wave.metadata.total_mass)
-    ntime = np.arange(time[0], -29.0, dt)
+
+    mask = np.where((time > -1500) & (time < -29))
+    new_time = time[mask]  # np.arange(time[0], -29.0, dt)
+
     if max(abs(omega)) == 0:
-        new_time = ntime
         amp_rec = np.zeros(len(new_time))
         phase_rec = np.zeros(len(new_time))
     else:
-        interp_omega = make_interp_spline(time, omega)
-        interp_amp = make_interp_spline(time, amp)
+        omega_circ = omega[mask]
+        amp_circ = amp[mask]
+        # shift_omega = omega[(np.abs(new_time + 1500)).argmin()]
+        # shift_amp = amp[(np.abs(new_time + 1500)).argmin()]
 
-        new_time = ntime
-
-        omega_circ = -interp_omega(new_time)
-        amp_circ = interp_amp(new_time)
-        shift_omega = -interp_omega(-1500)
-        shift_amp = interp_amp(-1500)
-
-        x_omega = np.nan_to_num(
-            (-omega_circ) ** phase_pwr - (-shift_omega) ** phase_pwr
-        )
-        x_amp = np.nan_to_num((amp_circ) ** amp_pwr - shift_amp**amp_pwr)
+        x_omega = omega_circ**phase_pwr  # - shift_omega**phase_pwr
+        x_amp = amp_circ**amp_pwr  # - shift_amp**amp_pwr
 
         fit_ex_omega = f_sin(
             x_omega, par_omega[0], par_omega[1], par_omega[2], par_omega[3]
         )
         fit_ex_amp = f_sin(x_amp, par_amp[0], par_amp[1], par_amp[2], par_amp[3])
+
+        # Look about the same in the paper
         omega_rec = fit_ex_omega * 2 * omega_circ + omega_circ
+        amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
 
-        mask = np.isfinite(omega_rec)
-        omega_rec = np.interp(new_time, new_time[mask], omega_rec[mask])
-
+        new_time = units.tM_to_tSI(new_time, wave.metadata.total_mass)
         phase_rec = integrate.cumulative_trapezoid(
             units.fM_to_fSI(omega_rec, wave.metadata.total_mass), new_time, initial=0
         )
-        amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
-
-        amp_mask = np.isfinite(amp_rec)
-        amp_rec = make_interp_spline(new_time[amp_mask], amp_rec[amp_mask])(new_time)
         amp_rec = units.mM_to_mSI(
             amp_rec, wave.metadata.total_mass, wave.metadata.distance
         )
 
-        phase_mask = np.isfinite(phase_rec)
-        phase_rec = make_interp_spline(new_time[phase_mask], phase_rec[phase_mask])(
-            new_time
-        )
-        new_time = units.tM_to_tSI(new_time, wave.metadata.total_mass)
     return new_time, amp_rec, phase_rec
