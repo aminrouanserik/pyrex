@@ -1,8 +1,6 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from scipy.signal import savgol_filter
 from scipy.interpolate import make_interp_spline
-from qcextender import units
 
 
 def interp_omega(time_circular, time_eccentric, omega_circular):
@@ -129,56 +127,6 @@ def get_noncirc_params(somedict):
     return ecc_q, ecc_e, ecc_x, par_omega, par_amp
 
 
-def near_merger(wave):
-
-    time = wave.time
-    interp_amp = make_interp_spline(time, wave.amp())
-    interp_phase = make_interp_spline(time, wave.phase())
-    end_time = time[-1]
-    delta_t = wave.metadata.delta_t
-    near_merger_time = np.arange(
-        units.tM_to_tSI(-29.0, wave.metadata.total_mass) + delta_t,
-        end_time + delta_t,
-        delta_t,
-    )
-    new_amp = interp_amp(near_merger_time)
-    new_phase = interp_phase(near_merger_time)
-    return near_merger_time, new_amp, new_phase
-
-
-def smooth_joint(time, y, total_mass):
-    """
-    Smooth the joint curve of the twist and the late merger.
-    Parameters
-    ----------
-    x        : []
-               Full time array of the curve.
-    y        : []
-               Full amplitude array of the curve.
-
-    Returns
-    ------
-    y_inter   : []
-                Smoothed amplitude array.
-    """
-
-    tarray = np.where(
-        np.logical_and(
-            time < units.tM_to_tSI(-25, total_mass),
-            time >= units.tM_to_tSI(-46, total_mass),
-        )
-    )
-    # tarray=where(np.logical_and(x<-31*total_mass*lal.MTSUN_SI,x>=-80*total_mass*lal.MTSUN_SI))
-    first = tarray[0][0]
-    last = tarray[0][-1]
-    y[first:last] = np.interp(
-        time[first:last], [time[first], time[last]], [y[first], y[last]]
-    )
-    # y[first:last] = savgol_filter(y[first:last], 9, 3)
-    y_inter = savgol_filter(y, 31, 3)
-    return y_inter
-
-
 __all__ = [
     "interp_omega",
     "f_sin",
@@ -186,6 +134,4 @@ __all__ = [
     "fitting_eccentric_function",
     "find_x",
     "get_noncirc_params",
-    "near_merger",
-    "smooth_joint",
 ]

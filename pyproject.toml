@@ -22,4 +22,4 @@ requires = ["uv_build>=0.8.17,<0.9.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
-qcextender = { path = "qcextender-0.1.10.tar.gz" }
+qcextender = { path = "qcextender-0.2.2.tar.gz" }

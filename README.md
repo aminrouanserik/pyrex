@@ -21,3 +21,9 @@ git clone git@github.com:aminrouanserik/pyrex.git
 cd pyrex
 pip install -e .
 ```
+
+## To-Do
+- [ ] Make Cookware a set of functions, not a class
+- [ ] Remove circularization for now
+- [ ] Rewrite Glassware using qcextender (and test)
+- [ ] Include gweccentricity

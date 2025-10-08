@@ -1,10 +1,8 @@
-import numpy as np
 import pickle
 import glob
 import os
 from scipy import interpolate
 import statistics
-from scipy.interpolate import make_interp_spline
 
 
 def read_pkl(file_dir):
@@ -144,52 +142,6 @@ def check_duplicate_training(trainkey, trainval):
     return newkey, newval
 
 
-def sanity_modes(
-    t22,
-    amp22_model,
-    phase22_model,
-    h22_model,
-    t2_2,
-    amp2_2_model,
-    phase2_2_model,
-    h2_2_model,
-):
-    def interpolate_data(oldtime, newtime, amp, phase, h22):
-        interp_amp = make_interp_spline(oldtime, amp)
-        interp_phase = make_interp_spline(oldtime, phase)
-        interp_h_real = make_interp_spline(oldtime, np.real(h22))
-        interp_h_imag = make_interp_spline(oldtime, np.imag(h22))
-        newamp = interp_amp(newtime)
-        newphase = interp_phase(newtime)
-        newh = interp_h_real(newtime) + interp_h_imag(newtime) * 1j
-        return newamp, newphase, newh
-
-    if len(t22) != len(t2_2):
-        tbegin = np.max((t22[0], t2_2[0]))
-        tfinal = np.min((t22[::-1][0], t2_2[::-1][0]))
-        deltat = np.min((np.abs(t22[1] - t22[0]), np.abs(t2_2[1] - t2_2[0])))
-        t_join = np.arange(tbegin, tfinal, deltat)
-        amp22_model, phase22_model, h22_model = interpolate_data(
-            t22, t_join, amp22_model, phase22_model, h22_model
-        )
-        # elif len(t_join)!=len(t2_2):
-        amp2_2_model, phase2_2_model, h2_2_model = interpolate_data(
-            t2_2, t_join, amp2_2_model, phase2_2_model, h2_2_model
-        )
-    else:
-        t_join = t22
-    return (
-        t_join,
-        amp22_model,
-        phase22_model,
-        h22_model,
-        t2_2,
-        amp2_2_model,
-        phase2_2_model,
-        h2_2_model,
-    )
-
-
 __all__ = [
     "read_pkl",
     "write_pkl",
@@ -197,5 +149,4 @@ __all__ = [
     "checkIfFilesExist",
     "interp1D",
     "check_duplicate_training",
-    "sanity_modes",
 ]

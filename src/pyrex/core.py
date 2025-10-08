@@ -1,12 +1,10 @@
 import numpy as np
-from pyrex.tools import near_merger, smooth_joint, get_noncirc_params, f_sin
+from pyrex.tools import get_noncirc_params, f_sin
 from pyrex.basics import interp1D, checkIfFilesExist, read_pkl
-from scipy.interpolate import make_interp_spline
 from scipy import integrate
+from scipy.signal import savgol_filter
 from qcextender.waveform import Waveform
 from qcextender import units
-
-import matplotlib.pyplot as plt
 
 
 class Cookware:
@@ -102,6 +100,7 @@ class Cookware:
             kwargs = {"omega_keys": self.omega_keys, "amp_keys": self.amp_keys}
             self.newwave = self.wave.add_eccentricity(
                 self.construct,
+                eccentricity,
                 [(2, 2)],
                 omega_keys=self.omega_keys,
                 amp_keys=self.amp_keys,
@@ -232,10 +231,9 @@ def eccentric_from_circular(
     time = units.tSI_to_tM(wave.time, wave.metadata.total_mass)
     omega = units.fSI_to_fM(wave.omega(), wave.metadata.total_mass)
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
-    dt = units.tSI_to_tM(wave.metadata.delta_t, wave.metadata.total_mass)
 
     mask = np.where((time > -1500) & (time < -29))
-    new_time = time[mask]  # np.arange(time[0], -29.0, dt)
+    new_time = time[mask]
 
     if max(abs(omega)) == 0:
         amp_rec = np.zeros(len(new_time))
@@ -254,7 +252,7 @@ def eccentric_from_circular(
         )
         fit_ex_amp = f_sin(x_amp, par_amp[0], par_amp[1], par_amp[2], par_amp[3])
 
-        # Look about the same in the paper
+        # Look about the same as in the paper
         omega_rec = fit_ex_omega * 2 * omega_circ + omega_circ
         amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
 
@@ -267,3 +265,43 @@ def eccentric_from_circular(
         )
 
     return new_time, amp_rec, phase_rec
+
+
+def near_merger(wave):
+    time = wave.time
+    mask = np.where(time > units.tM_to_tSI(-29.0, wave.metadata.total_mass))
+    near_merger_time = time[mask]
+    new_amp = wave.amp()[mask]
+    new_phase = wave.phase()[mask]
+    return near_merger_time, new_amp, new_phase
+
+
+def smooth_joint(time, y, total_mass):
+    """
+    Smooth the joint curve of the twist and the late merger.
+    Parameters
+    ----------
+    x        : []
+               Full time array of the curve.
+    y        : []
+               Full amplitude array of the curve.
+
+    Returns
+    ------
+    y_inter   : []
+                Smoothed amplitude array.
+    """
+
+    tarray = np.where(
+        (time < units.tM_to_tSI(-25, total_mass))
+        & (time >= units.tM_to_tSI(-46, total_mass))
+    )
+
+    first = tarray[0][0]
+    last = tarray[0][-1]
+    y[first:last] = np.interp(
+        time[first:last], [time[first], time[last]], [y[first], y[last]]
+    )
+    # # y[first:last] = savgol_filter(y[first:last], 9, 3)
+    y_inter = savgol_filter(y, 31, 3)
+    return y_inter

@@ -146,14 +146,14 @@ class Glassware(object):
                          1 dimensional array to of h22 in circular eccentricity.
 
         """
-        begin_tm = -1500.0
+        begin_tm = -1500.0  # Hardcoded, based on what exactly?
         end_tm = -29  # -31
-        len_tm = 15221
+        len_tm = 15221  # Why is this even specified?
         # dt=0.09664644309623327
         new_time = np.linspace(begin_tm, end_tm, len_tm)  # arange(begin_tm,end_tm,dt)
 
         circ_names, circ_q, circ_time, circ_amp, circ_phase, circ_omega = (
-            Glassware.check_double_circ(self)
+            self.check_double_circ()
         )
 
         eX_omega = Glassware.get_eX(
