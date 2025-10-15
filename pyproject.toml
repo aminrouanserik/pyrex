@@ -23,3 +23,8 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 qcextender = { path = "qcextender-0.2.2.tar.gz" }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.30.1",
+]

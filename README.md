@@ -23,7 +23,10 @@ pip install -e .
 ```
 
 ## To-Do
-- [ ] Make Cookware a set of functions, not a class
+- [ ] Make Cookware a set of functions, not a class. Test every function individually (including 0 eccentricity test cases)
 - [ ] Remove circularization for now
 - [ ] Rewrite Glassware using qcextender (and test)
 - [ ] Include gweccentricity
+
+## Ideas
+- [ ] Boundary conditions for final phase and amp

@@ -96,18 +96,21 @@ class Cookware:
         training_dict = read_pkl(training)
         self.get_key_quant(training_dict)
 
-        if eccentricity > 3e-2:
-            kwargs = {"omega_keys": self.omega_keys, "amp_keys": self.amp_keys}
-            self.newwave = self.wave.add_eccentricity(
-                self.construct,
-                eccentricity,
-                [(2, 2)],
-                omega_keys=self.omega_keys,
-                amp_keys=self.amp_keys,
-            )
+        # if eccentricity > 3e-2:
+        kwargs = {"omega_keys": self.omega_keys, "amp_keys": self.amp_keys}
+        self.newwave = self.wave.add_eccentricity(
+            self.construct,
+            eccentricity,
+            [(2, 2)],
+            omega_keys=self.omega_keys,
+            amp_keys=self.amp_keys,
+        )
 
-            self.time = self.newwave.time
-            self.h22 = self.newwave[2, 2]
+        self.time = self.newwave.time
+        self.h22 = self.newwave[2, 2]
+
+    def get_wave(self):
+        return self.newwave
 
     @staticmethod
     def checkEccentricInp(eccentricity):
@@ -198,27 +201,20 @@ class Cookware:
 
     @staticmethod
     def construct(wave, mode, omega_keys, amp_keys):
-        timenew, amp_rec, phase_rec = eccentric_from_circular(
+        timenew, amp_rec, phase_rec, mask = eccentric_from_circular(
             omega_keys, amp_keys, wave
         )
 
-        late_time, late_amp, late_phase = near_merger(wave)
-        amp_construct = np.concatenate((amp_rec, late_amp))
-        phase_construct = np.concatenate((phase_rec, late_phase))
+        late_time, late_amp, late_phase = near_merger(wave, mask)
 
-        h_model = amp_construct * np.exp(phase_construct * 1j)
+        # Discrepancy especially for SEOBNRv4 because of this?
+        phase_rec += late_phase[0] - phase_rec[-1]
 
-        amp_model = np.abs(h_model)
-        phase_model = np.unwrap(np.angle(h_model))
-        time_construct = np.concatenate((timenew, late_time))
+        amp_construct = np.concatenate((amp_rec, late_amp[1:]))
+        phase_construct = np.concatenate((phase_rec, late_phase[1:]))
+        time_construct = np.concatenate((timenew, late_time[1:]))
 
-        amp_model = smooth_joint(time_construct, amp_model, wave.metadata.total_mass)
-        phase_model = smooth_joint(
-            time_construct, phase_model, wave.metadata.total_mass
-        )
-
-        h_model = amp_model * np.exp(phase_model * 1j)
-        return time_construct, phase_model, amp_model
+        return time_construct, phase_construct, amp_construct
 
 
 def eccentric_from_circular(
@@ -231,8 +227,11 @@ def eccentric_from_circular(
     time = units.tSI_to_tM(wave.time, wave.metadata.total_mass)
     omega = units.fSI_to_fM(wave.omega(), wave.metadata.total_mass)
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
+    phases = wave.phase()
+    # max_phase = phases[np.argmax(amp)]
 
-    mask = np.where((time > -1500) & (time < -29))
+    # Lower bound shouldn't be hardcoded
+    mask = np.where((time < -29))  # (time > -5000) &
     new_time = time[mask]
 
     if max(abs(omega)) == 0:
@@ -241,38 +240,47 @@ def eccentric_from_circular(
     else:
         omega_circ = omega[mask]
         amp_circ = amp[mask]
-        # shift_omega = omega[(np.abs(new_time + 1500)).argmin()]
-        # shift_amp = amp[(np.abs(new_time + 1500)).argmin()]
 
-        x_omega = omega_circ**phase_pwr  # - shift_omega**phase_pwr
-        x_amp = amp_circ**amp_pwr  # - shift_amp**amp_pwr
+        # Shift appears crucial, but why
+        shift_omega = omega[
+            (np.abs(new_time + 1500)).argmin()
+        ]  # omega[np.argmax(np.abs(amp))]
+        shift_amp = amp[
+            (np.abs(new_time + 1500)).argmin()
+        ]  # amp[np.argmax(np.abs(amp))]
 
-        fit_ex_omega = f_sin(
-            x_omega, par_omega[0], par_omega[1], par_omega[2], par_omega[3]
-        )
-        fit_ex_amp = f_sin(x_amp, par_amp[0], par_amp[1], par_amp[2], par_amp[3])
+        # x_omega = omega_circ**phase_pwr - shift_omega**phase_pwr
+        # x_amp = amp_circ**amp_pwr - shift_amp**amp_pwr
 
-        # Look about the same as in the paper
-        omega_rec = fit_ex_omega * 2 * omega_circ + omega_circ
-        amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
+        # fit_ex_omega = f_sin(
+        #     x_omega, par_omega[0], par_omega[1], par_omega[2], par_omega[3]
+        # )
+        # fit_ex_amp = f_sin(x_amp, par_amp[0], par_amp[1], par_amp[2], par_amp[3])
+
+        # Look about the same as in the paper, signs are negative for omega (crucial)
+        # omega_rec = fit_ex_omega * 2 * (-omega_circ) - omega_circ
+        # amp_rec = fit_ex_amp * 2 * amp_circ + amp_circ
 
         new_time = units.tM_to_tSI(new_time, wave.metadata.total_mass)
-        phase_rec = integrate.cumulative_trapezoid(
-            units.fM_to_fSI(omega_rec, wave.metadata.total_mass), new_time, initial=0
-        )
+
+        # How to make sure there is no phase difference? This is crucial not only for visual comparisons but to ensure the filter does no damage
+        # phase_rec = integrate.cumulative_trapezoid(
+        #     units.fM_to_fSI(omega_rec, wave.metadata.total_mass), new_time, initial=0
+        # )
+        phase_rec = phases[mask]
+
         amp_rec = units.mM_to_mSI(
-            amp_rec, wave.metadata.total_mass, wave.metadata.distance
+            amp_circ, wave.metadata.total_mass, wave.metadata.distance
         )
 
-    return new_time, amp_rec, phase_rec
+    return new_time, amp_rec, phase_rec, mask
 
 
-def near_merger(wave):
+def near_merger(wave, mask):
     time = wave.time
-    mask = np.where(time > units.tM_to_tSI(-29.0, wave.metadata.total_mass))
-    near_merger_time = time[mask]
-    new_amp = wave.amp()[mask]
-    new_phase = wave.phase()[mask]
+    near_merger_time = time[mask[0][-1] :]
+    new_amp = wave.amp()[mask[0][-1] :]
+    new_phase = wave.phase()[mask[0][-1] :]
     return near_merger_time, new_amp, new_phase
 
 

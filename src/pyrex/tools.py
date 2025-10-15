@@ -27,7 +27,6 @@ def interp_omega(time_circular, time_eccentric, omega_circular):
 
 
 def f_sin(xdata, amplitude, B, freq, phase):
-    # TODO: fix the function description.
     """
     Computes sinusoidal function given the input parameters.
 
