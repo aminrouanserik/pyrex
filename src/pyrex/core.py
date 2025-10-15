@@ -7,6 +7,58 @@ from qcextender.waveform import Waveform
 from qcextender import units
 
 
+def main(approximant, mode, **kwargs):
+    eccentricity = kwargs.pop("eccentricity")
+
+    wave = Waveform.from_model(approximant, mode, **kwargs)
+
+    x = wave.omega()[0] ** (2 / 3)
+
+    # check requirements
+    training = checkIfFilesExist()
+
+    training_dict = read_pkl(training)
+    omega_keys, amp_keys = get_key_quant(
+        training_dict, wave.metadata.q, eccentricity, x
+    )
+
+    # if eccentricity > 3e-2:
+    kwargs = {"omega_keys": omega_keys, "amp_keys": amp_keys}
+    newwave = wave.add_eccentricity(
+        construct,
+        eccentricity,
+        [(2, 2)],
+        omega_keys=omega_keys,
+        amp_keys=amp_keys,
+    )
+
+    return newwave
+
+
+def construct(wave, mode, omega_keys, amp_keys):
+    timenew, amp_rec, phase_rec, mask = eccentric_from_circular(
+        omega_keys, amp_keys, wave
+    )
+
+    late_time, late_amp, late_phase = near_merger(wave, mask)
+
+    phase_rec += late_phase[0] - phase_rec[-1]
+
+    amp_construct = np.concatenate((amp_rec, late_amp[1:]))
+    phase_construct = np.concatenate((phase_rec, late_phase[1:]))
+    time_construct = np.concatenate((timenew, late_time[1:]))
+
+    return time_construct, phase_construct, amp_construct
+
+
+def near_merger(wave, mask):
+    time = wave.time
+    near_merger_time = time[mask[0][-1] :]
+    new_amp = wave.amp()[mask[0][-1] :]
+    new_phase = wave.phase()[mask[0][-1] :]
+    return near_merger_time, new_amp, new_phase
+
+
 def eccentric_from_circular(
     par_omega,
     par_amp,
@@ -53,84 +105,16 @@ def eccentric_from_circular(
 
         new_time = units.tM_to_tSI(new_time, wave.metadata.total_mass)
 
-        # How to make sure there is no phase difference? This is crucial not only for visual comparisons but to ensure the filter does no damage
-        # phase_rec = integrate.cumulative_trapezoid(
-        #     units.fM_to_fSI(omega_rec, wave.metadata.total_mass), new_time, initial=0
-        # )
-        phase_rec = phases[mask]
+        # Minus sign crucial for circ, checking if also when fitting again
+        phase_rec = integrate.cumulative_trapezoid(
+            units.fM_to_fSI(-omega_circ, wave.metadata.total_mass), new_time, initial=0
+        )
 
         amp_rec = units.mM_to_mSI(
             amp_circ, wave.metadata.total_mass, wave.metadata.distance
         )
 
     return new_time, amp_rec, phase_rec, mask
-
-
-def near_merger(wave, mask):
-    time = wave.time
-    near_merger_time = time[mask[0][-1] :]
-    new_amp = wave.amp()[mask[0][-1] :]
-    new_phase = wave.phase()[mask[0][-1] :]
-    return near_merger_time, new_amp, new_phase
-
-
-def smooth_joint(time, y, total_mass):
-    """
-    Smooth the joint curve of the twist and the late merger.
-    Parameters
-    ----------
-    x        : []
-               Full time array of the curve.
-    y        : []
-               Full amplitude array of the curve.
-
-    Returns
-    ------
-    y_inter   : []
-                Smoothed amplitude array.
-    """
-
-    tarray = np.where(
-        (time < units.tM_to_tSI(-25, total_mass))
-        & (time >= units.tM_to_tSI(-46, total_mass))
-    )
-
-    first = tarray[0][0]
-    last = tarray[0][-1]
-    y[first:last] = np.interp(
-        time[first:last], [time[first], time[last]], [y[first], y[last]]
-    )
-    # # y[first:last] = savgol_filter(y[first:last], 9, 3)
-    y_inter = savgol_filter(y, 31, 3)
-    return y_inter
-
-
-def main(approximant, mode, **kwargs):
-    eccentricity = kwargs.pop("eccentricity")
-
-    wave = Waveform.from_model(approximant, mode, **kwargs)
-
-    x = wave.omega()[0] ** (2 / 3)
-
-    # check requirements
-    training = checkIfFilesExist()
-
-    training_dict = read_pkl(training)
-    omega_keys, amp_keys = get_key_quant(
-        training_dict, wave.metadata.q, eccentricity, x
-    )
-
-    # if eccentricity > 3e-2:
-    kwargs = {"omega_keys": omega_keys, "amp_keys": amp_keys}
-    newwave = wave.add_eccentricity(
-        construct,
-        eccentricity,
-        [(2, 2)],
-        omega_keys=omega_keys,
-        amp_keys=amp_keys,
-    )
-
-    return newwave
 
 
 def get_key_quant(training_dict, q, eccentricity, x):
@@ -189,17 +173,32 @@ def interpol_key_quant(training_quant, training_keys, test_quant):
     return A, B, freq, phi
 
 
-def construct(wave, mode, omega_keys, amp_keys):
-    timenew, amp_rec, phase_rec, mask = eccentric_from_circular(
-        omega_keys, amp_keys, wave
-    )
+# def smooth_joint(time, y, total_mass):
+#     """
+#     Smooth the joint curve of the twist and the late merger.
+#     Parameters
+#     ----------
+#     x        : []
+#                Full time array of the curve.
+#     y        : []
+#                Full amplitude array of the curve.
 
-    late_time, late_amp, late_phase = near_merger(wave, mask)
+#     Returns
+#     ------
+#     y_inter   : []
+#                 Smoothed amplitude array.
+#     """
 
-    phase_rec += late_phase[0] - phase_rec[-1]
+#     tarray = np.where(
+#         (time < units.tM_to_tSI(-25, total_mass))
+#         & (time >= units.tM_to_tSI(-46, total_mass))
+#     )
 
-    amp_construct = np.concatenate((amp_rec, late_amp[1:]))
-    phase_construct = np.concatenate((phase_rec, late_phase[1:]))
-    time_construct = np.concatenate((timenew, late_time[1:]))
-
-    return time_construct, phase_construct, amp_construct
+#     first = tarray[0][0]
+#     last = tarray[0][-1]
+#     y[first:last] = np.interp(
+#         time[first:last], [time[first], time[last]], [y[first], y[last]]
+#     )
+#     # # y[first:last] = savgol_filter(y[first:last], 9, 3)
+#     y_inter = savgol_filter(y, 31, 3)
+#     return y_inter
