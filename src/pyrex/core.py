@@ -7,216 +7,6 @@ from qcextender.waveform import Waveform
 from qcextender import units
 
 
-class Cookware:
-    """
-    A class to twist any analytic circular waveforms into eccentric model.
-    """
-
-    def __init__(
-        self,
-        approximant,
-        mass1,
-        mass2,
-        spin1x,
-        spin1y,
-        spin1z,
-        spin2x,
-        spin2y,
-        spin2z,
-        eccentricity,
-        x,
-        inclination,
-        distance,
-        coa_phase,
-        sample_rate=4096.0,
-        f_lower=25,
-        varphi=None,
-    ):
-        """
-        Initiates Cookware class for non-spinning, low eccentricity, and mass ratio<=3 binaries.
-
-        Parameters
-        ----------
-        mass1         : {float}
-                      Mass of the hevaiest object (MSun).
-        mass2         : {float}
-                  Dimensionless spin parameters.
-        approximant   : {str}
-                  Waveform approximant of analytic waves.
-
-        chi           : {float}
-                  Spin of the system.
-        distance      : {float}
-                  Distance of the two bodies (Mpc).
-        inclination   : {float}
-                  Inclination angle (rad).
-        coa_phase     : {float}
-                  Coalescence phase (rad).
-
-        Returns
-        ------
-        times         : []
-                     Time sample array.
-        h22	          : []
-                     Complex numbers of the eccentric l=2, m=2 mode.
-        """
-        self.approximant = approximant
-        self.mass1 = mass1
-        self.mass2 = mass2
-        self.spin1x = spin1x
-        self.spin1y = spin1y
-        self.spin1z = spin1z
-        self.spin2x = spin2x
-        self.spin2y = spin2y
-        self.spin2z = spin2z
-        self.eccentricity = eccentricity
-        self.inclination = inclination
-        self.distance = distance
-        self.coa_phase = coa_phase
-        self.x = x
-        self.varphi = varphi
-
-        # generate analytic waveform
-        kwargs = {
-            "mass1": mass1,
-            "mass2": mass2,
-            "inclination": inclination,
-            "coa_phase": coa_phase,
-            "delta_t": 1.0 / sample_rate,
-            "f_lower": 25,
-            "f_ref": 25,  # Change to be specific to waveform model used, want to do that in the generation.
-            "distance": distance,
-        }
-        self.wave = Waveform.from_model(approximant, [(2, 2)], **kwargs)
-
-        # check requirements
-        self.checkParBoundaris()
-        training = checkIfFilesExist()
-
-        training_dict = read_pkl(training)
-        self.get_key_quant(training_dict)
-
-        # if eccentricity > 3e-2:
-        kwargs = {"omega_keys": self.omega_keys, "amp_keys": self.amp_keys}
-        self.newwave = self.wave.add_eccentricity(
-            self.construct,
-            eccentricity,
-            [(2, 2)],
-            omega_keys=self.omega_keys,
-            amp_keys=self.amp_keys,
-        )
-
-        self.time = self.newwave.time
-        self.h22 = self.newwave[2, 2]
-
-    def get_wave(self):
-        return self.newwave
-
-    @staticmethod
-    def checkEccentricInp(eccentricity):
-        if eccentricity < 0.0 or (eccentricity > 0.2 and eccentricity < 1.0):
-            print("This version has only been calibrated up to eccentricity<0.2.")
-        elif eccentricity >= 1.0:
-            raise ValueError("Change eccentricity value (e<1)!")
-        else:
-            pass
-
-    def checkParBoundaris(self):
-        chi1 = np.sqrt(self.spin1x**2 + self.spin1y**2 + self.spin1z**2)
-        chi2 = np.sqrt(self.spin2x**2 + self.spin2y**2 + self.spin2z**2)
-        if abs(chi1) == 0.0 and abs(chi2) == 0.0:
-            self.q = self.mass1 / self.mass2
-            if self.q >= 1 and self.q <= 3:
-                Cookware.checkEccentricInp(self.eccentricity)
-            elif self.q > 3:
-                print("This version has only been calibrated up to q<=3.")
-                Cookware.checkEccentricInp(self.eccentricity)
-            else:
-                raise ValueError("Please correct your mass ratio, only for q>=1.")
-        else:
-            raise ValueError(
-                "This version has only been calibrated to non-spinning binaries."
-            )
-
-    @staticmethod
-    def interpol_key_quant(training_quant, training_keys, test_quant):
-        """
-        Interpolate key quantities.
-        """
-        forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
-        A = float(
-            interp1D(
-                training_quant[1], abs(np.asarray(training_keys[0])), test_quant[1]
-            )
-        )
-        B = np.log(
-            (
-                interp1D(
-                    training_quant[1],
-                    training_keys[0] * np.exp(training_keys[1]),
-                    test_quant[1],
-                )
-            )
-            / np.asarray(forA)
-        )
-        freq = np.sqrt(
-            1.0
-            / (
-                interp1D(
-                    np.asarray(training_quant[0]),
-                    1.0 / np.asarray(training_keys[2]) ** 2,
-                    test_quant[0],
-                )
-            )
-        )
-        phi = float(
-            interp1D(
-                np.asarray(training_quant[2]),
-                np.asarray(training_keys[3]),
-                np.asarray(test_quant[2]),
-            )
-        )
-
-        return A, B, freq, phi
-
-    def get_key_quant(self, training_dict):
-
-        q = self.mass1 / self.mass2
-        eq, ee, ex, eomg, eamp = get_noncirc_params(training_dict)
-        training_quant = [eq, ee, ex]
-
-        test_quant = [q, self.eccentricity, self.x]
-
-        A_omega, B_omega, freq_omega, phi_omega = Cookware.interpol_key_quant(
-            training_quant, eomg, test_quant
-        )
-        A_amp, B_amp, freq_amp, phi_amp = Cookware.interpol_key_quant(
-            training_quant, eamp, test_quant
-        )
-        if self.varphi:
-            phi_omega = self.varphi[1]
-            phi_amp = self.varphi[0]
-        self.omega_keys = [A_omega, B_omega, freq_omega, phi_omega]
-        self.amp_keys = [A_amp, B_amp, freq_amp, phi_amp]
-
-    @staticmethod
-    def construct(wave, mode, omega_keys, amp_keys):
-        timenew, amp_rec, phase_rec, mask = eccentric_from_circular(
-            omega_keys, amp_keys, wave
-        )
-
-        late_time, late_amp, late_phase = near_merger(wave, mask)
-
-        # Discrepancy especially for SEOBNRv4 because of this?
-        phase_rec += late_phase[0] - phase_rec[-1]
-
-        amp_construct = np.concatenate((amp_rec, late_amp[1:]))
-        phase_construct = np.concatenate((phase_rec, late_phase[1:]))
-        time_construct = np.concatenate((timenew, late_time[1:]))
-
-        return time_construct, phase_construct, amp_construct
-
-
 def eccentric_from_circular(
     par_omega,
     par_amp,
@@ -313,3 +103,103 @@ def smooth_joint(time, y, total_mass):
     # # y[first:last] = savgol_filter(y[first:last], 9, 3)
     y_inter = savgol_filter(y, 31, 3)
     return y_inter
+
+
+def main(approximant, mode, **kwargs):
+    eccentricity = kwargs.pop("eccentricity")
+
+    wave = Waveform.from_model(approximant, mode, **kwargs)
+
+    x = wave.omega()[0] ** (2 / 3)
+
+    # check requirements
+    training = checkIfFilesExist()
+
+    training_dict = read_pkl(training)
+    omega_keys, amp_keys = get_key_quant(
+        training_dict, wave.metadata.q, eccentricity, x
+    )
+
+    # if eccentricity > 3e-2:
+    kwargs = {"omega_keys": omega_keys, "amp_keys": amp_keys}
+    newwave = wave.add_eccentricity(
+        construct,
+        eccentricity,
+        [(2, 2)],
+        omega_keys=omega_keys,
+        amp_keys=amp_keys,
+    )
+
+    return newwave
+
+
+def get_key_quant(training_dict, q, eccentricity, x):
+
+    eq, ee, ex, eomg, eamp = get_noncirc_params(training_dict)
+    training_quant = [eq, ee, ex]
+
+    test_quant = [q, eccentricity, x]
+
+    A_omega, B_omega, freq_omega, phi_omega = interpol_key_quant(
+        training_quant, eomg, test_quant
+    )
+    A_amp, B_amp, freq_amp, phi_amp = interpol_key_quant(
+        training_quant, eamp, test_quant
+    )
+
+    omega_keys = [A_omega, B_omega, freq_omega, phi_omega]
+    amp_keys = [A_amp, B_amp, freq_amp, phi_amp]
+
+    return omega_keys, amp_keys
+
+
+def interpol_key_quant(training_quant, training_keys, test_quant):
+    forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
+    A = float(
+        interp1D(training_quant[1], np.abs(np.asarray(training_keys[0])), test_quant[1])
+    )
+    B = np.log(
+        (
+            interp1D(
+                training_quant[1],
+                training_keys[0] * np.exp(training_keys[1]),
+                test_quant[1],
+            )
+        )
+        / np.asarray(forA)
+    )
+    freq = np.sqrt(
+        1.0
+        / (
+            interp1D(
+                np.asarray(training_quant[0]),
+                1.0 / np.asarray(training_keys[2]) ** 2,
+                test_quant[0],
+            )
+        )
+    )
+    phi = float(
+        interp1D(
+            np.asarray(training_quant[2]),
+            np.asarray(training_keys[3]),
+            np.asarray(test_quant[2]),
+        )
+    )
+
+    return A, B, freq, phi
+
+
+def construct(wave, mode, omega_keys, amp_keys):
+    timenew, amp_rec, phase_rec, mask = eccentric_from_circular(
+        omega_keys, amp_keys, wave
+    )
+
+    late_time, late_amp, late_phase = near_merger(wave, mask)
+
+    phase_rec += late_phase[0] - phase_rec[-1]
+
+    amp_construct = np.concatenate((amp_rec, late_amp[1:]))
+    phase_construct = np.concatenate((phase_rec, late_phase[1:]))
+    time_construct = np.concatenate((timenew, late_time[1:]))
+
+    return time_construct, phase_construct, amp_construct

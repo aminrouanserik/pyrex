@@ -53,8 +53,8 @@ std_seob = {
 
 dimension = dimensionless.to_Waveform(25, mass1 + mass2, distance)
 
-phen_ecc = Cookware(**std_phenom).get_wave()
-seob_ecc = Cookware(**std_seob).get_wave()
+# phen_ecc = Cookware(**std_phenom).get_wave()
+# seob_ecc = Cookware(**std_seob).get_wave()
 
 kwargs = {
     "mass1": 12.5,
@@ -69,6 +69,21 @@ kwargs = {
 
 phenom = Waveform.from_model("IMRPhenomD", [(2, 2)], **kwargs)
 seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargs)
+
+kwargs = {
+    "mass1": 12.5,
+    "mass2": 12.5,
+    "inclination": 0,
+    "coa_phase": 0,
+    "delta_t": 1.0 / 4196,
+    "f_lower": 25,
+    "f_ref": 25,
+    "distance": 10,
+    "eccentricity": 0,
+}
+
+phen_ecc = main("IMRPhenomD", [(2, 2)], **kwargs)
+seob_ecc = main("SEOBNRv4", [(2, 2)], **kwargs)
 
 plt.plot(phen_ecc.time, phen_ecc[2, 2], label="IMRPhenomD_Pyrex")
 plt.plot(seob_ecc.time, seob_ecc[2, 2], label="SEOBNRv4_Pyrex")
