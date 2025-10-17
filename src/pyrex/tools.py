@@ -73,7 +73,7 @@ def fit_sin(xdata, ydata):
     fit_result  : []
                 1 dimensional array of the fitted data.
     """
-    popt, pcov = curve_fit(f_sin, xdata, ydata)
+    popt, _ = curve_fit(f_sin, xdata, ydata)
     fit_result = f_sin(xdata, *popt)
     return popt, fit_result
 

@@ -49,7 +49,7 @@ def checkIfDuplicates(listofElems):
     return False
 
 
-def checkIfFilesExist(
+def get_filename(
     dirfile="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/",
 ):
     """
