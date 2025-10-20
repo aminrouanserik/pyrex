@@ -126,8 +126,8 @@ def eccentric_from_circular(
         amp_circ = amp[mask]
 
         # Arbitrary shift is crucial
-        shift_omega = omega[(np.abs(new_time + 1500)).argmin()]
-        shift_amp = amp[(np.abs(new_time + 1500)).argmin()]
+        shift_omega = omega[0]
+        shift_amp = amp[0]
 
         x_omega = omega_circ**phase_pwr - shift_omega**phase_pwr
         x_amp = amp_circ**amp_pwr - shift_amp**amp_pwr

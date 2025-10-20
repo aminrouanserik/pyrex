@@ -1,210 +1,184 @@
 import numpy as np
-from pyrex.tools import fitting_eccentric_function, find_x
-from pyrex.basics import write_pkl, checkIfDuplicates
+from pyrex.tools import fit_sin, calculate_x
+from pyrex.basics import write_pkl
 from scipy.signal import savgol_filter
 from scipy.interpolate import make_interp_spline
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
 
 class Glassware(object):
-    """
-    A class to measure the eccentricity of a given NR waveform.
-    """
 
     def __init__(self, q, chi, names, e_ref, outfname=None):
-        """
-        Initiates Glassware class for non-spinning, low eccentricity, and mass ratio<=3 binaries.
 
-        Parameters
-        ----------
-        q           : []
-                      Mass ratio.
-        chi         : {float}
-                  Dimensionless spin parameters.
-        names       : []
-                  Simulation names.
-        e_ref       : []
-                  e at the reference frequency ('e_comm').
-
-        Returns
-        ------
-        times     : []
-                              Array of the sample time.
-        amp22	  : []
-                              Array of the amplitude of the l=2, m=2 mode.
-        phase22   : []
-                              Array of the phase of the l=e, m=e mode.
-        h22       : []
-                          Array of the l=2, m=2 strain.
-        """
-
-        if abs(chi) == 0.0:
-            if all(i >= 1.0 for i in q) and all(i <= 3.0 for i in q):
-                self.q = q
-                self.chi = chi
-                self.names = names
-                self.e_ref = e_ref
-            else:
-                raise ValueError("Please correct your mass ratio, only for q<=3.")
-        else:
+        if abs(chi) != 0.0:
             raise ValueError(
                 "Please correct your spin, only for the non-spinning binaries, s1x=s1y=s1z=s2x=s2y=s2z=0."
             )
-        self.components()
-        self.compute_e_estimator()
-        self.fit_model()
-        self.compute_xquant()
+        if not all(1.0 <= i <= 3.0 for i in q):
+            raise ValueError("Please correct your mass ratio, only for q<=3.")
+
+        waves = components(names)
+        circ_waves = get_circ_waves(waves, e_ref)
+
+        e_amp, e_omega, new_time = compute_e_estimator(waves, e_ref, circ_waves)
+        results = fit_model(waves, circ_waves, new_time, e_omega, e_amp)
+        x = compute_xquant(waves, new_time)
 
         # write and store the data
-        data_dict = self.__dict__
+        results.update({"q": q, "e_ref": e_ref, "x": x})
         if outfname:
-            write_pkl(outfname, data_dict)
+            write_pkl(outfname, results)
 
-    def components(self):
-        """
-        Computes and align the amplitude, phase, strain of the l=2, m=2 mode of NR waveforms.
 
-        Parameters
-        ----------
-        time_peak   : {float}
-                    The maximum amplitude before alignment.
-        """
-        times, amps, phases, h22s, omegas = [], [], [], [], []
-        for name in self.names:
-            sim = DimensionlessWaveform.from_sim(name)
-            times.append(sim.time)
-            amps.append(sim.amp())
-            phases.append(sim.phase())
-            h22s.append(sim[2, 2])
-            omegas.append(sim.omega())
+def components(names):
+    sims = []
+    for name in names:
+        sims.append(DimensionlessWaveform.from_sim(name))
+    return sims
 
-        self.time = np.asarray(times)
-        self.amp = np.asarray(amps)
-        self.phase = np.asarray(phases)
-        self.h22 = np.asarray(h22s)
-        self.omega = np.asarray(omegas)
 
-    def check_double_circ(self):
-        circ_q = []
-        circ_names = []
-        circ_amp = []
-        circ_phase = []
-        circ_omega = []
-        circ_time = []
-        for i in range(len(self.names)):
-            if self.e_ref[i] == 0:
-                circ_q.append(self.q[i])
-                circ_names.append(self.names[i])
-                circ_amp.append(self.amp[i])
-                circ_phase.append(self.phase[i])
-                circ_omega.append(self.omega[i])
-                circ_time.append(self.time[i])
-        if checkIfDuplicates(circ_q):
-            raise ValueError(
-                "Please check duplicates of mass ratio and eccentricity in the provided circular waveforms."
-            )
-        else:
-            for j in range(len(self.q)):
-                if self.q[j] not in circ_q:
-                    raise ValueError(
-                        '"Simulation name {} has no circular waveform with the same mass ratio"'.format(
-                            self.names[j]
-                        )
-                    )
-                else:
-                    pass
-        return circ_names, circ_q, circ_time, circ_amp, circ_phase, circ_omega
+def compute_e_estimator(waves, eccentricities, circ_waves):
+    # Need a common time grid for all waves for this code to work. Boundaries and length can be tinkered with
+    begin_tm = -1500.0
+    end_tm = -29
+    len_tm = 15221
+    new_time = np.linspace(begin_tm, end_tm, len_tm)
 
-    @staticmethod
-    def get_eX(self, circ_q, circ_time, circ, component, new_time, filter_comp=2):
+    circ_lookup_amp = {
+        np.round(circ.metadata.q, 2): (circ.time, circ.amp()) for circ in circ_waves
+    }
+    circ_lookup_omega = {
+        np.round(circ.metadata.q, 2): (circ.time, circ.omega()) for circ in circ_waves
+    }
 
-        eX = []
-        for i in range(len(circ_q)):
-            circs = make_interp_spline(circ_time[i], circ[i])
-            for j in range(len(self.q)):
-                ecc = make_interp_spline(self.time[j], component[j])
-                if self.q[j] == circ_q[i]:
-                    eX_filter = (ecc(new_time) - circs(new_time)) / (
-                        2.0 * circs(new_time)
-                    )
-                    if self.e_ref[j] != 0:
-                        eX_filter = savgol_filter(eX_filter, 501, filter_comp)
-                    eX.append(eX_filter)
-        return eX
+    e_amp, e_omega = [], []
+    for w, e in zip(waves, eccentricities):
+        e_amp.append(get_e_amp(w, e, circ_lookup_amp, new_time))
+        e_omega.append(get_e_omega(w, e, circ_lookup_omega, new_time))
 
-    def compute_e_estimator(self):
-        """
-        Computes eccentricity from omega as a function in time (see Husa).
+    return e_amp, e_omega, new_time
 
-        Parameters
-        ----------
-        time_circular    : []
-                         1 dimensional array to of time samples in circular eccentricity.
-        omega_circular   : []
-                         1 dimensional array to of omega in circular eccentricity.
-        h22              : []
-                         1 dimensional array to of h22 in circular eccentricity.
 
-        """
-        begin_tm = -1500.0  # Hardcoded, based on what exactly?
-        end_tm = -29  # -31
-        len_tm = 15221  # Why is this even specified?
-        # dt=0.09664644309623327
-        new_time = np.linspace(begin_tm, end_tm, len_tm)  # arange(begin_tm,end_tm,dt)
+def fit_model(
+    waves,
+    circ_waves,
+    new_time,
+    e_omega,
+    e_amp,
+    omega_power=-59 / 24,
+    amp_power=-83 / 24,
+):
+    omega_params = np.zeros((len(waves), 4))
+    amp_params = np.zeros((len(waves), 4))
+    omega_params, amp_params = [], []
+    fit_omega, fit_amp = [], []
 
-        circ_names, circ_q, circ_time, circ_amp, circ_phase, circ_omega = (
-            self.check_double_circ()
+    circ_lookup = {
+        round(c.metadata.q, 0): (
+            make_interp_spline(c.time, c.omega()),
+            make_interp_spline(c.time, c.amp()),
+        )
+        for c in circ_waves
+    }
+
+    for wave, omega, amp in zip(waves, e_omega, e_amp):
+
+        # This needs to be fixed throughout, just take closest q instead or take from model instead.
+        q = round(wave.metadata.q, 0)
+
+        if q not in circ_lookup:
+            raise ValueError(f"No circular reference for q={q}")
+
+        interp_omega_c, interp_amp_c = circ_lookup[q]
+
+        circ_omega_vals = interp_omega_c(new_time)
+        circ_amp_vals = interp_amp_c(new_time)
+
+        omega_paramsr, fit_omegar = fitting_eccentric_function(
+            omega_power, omega, circ_omega_vals
+        )
+        amp_paramsr, fit_ampr = fitting_eccentric_function(
+            amp_power, amp, circ_amp_vals
         )
 
-        eX_omega = Glassware.get_eX(
-            self, circ_q, circ_time, circ_omega, self.omega, new_time
-        )
-        eX_amp = Glassware.get_eX(
-            self, circ_q, circ_time, circ_amp, self.amp, new_time, filter_comp=3
-        )
-        self.eX_omega = eX_omega
-        self.eX_amp = eX_amp
-        self.new_time = new_time
+        omega_params.append(omega_paramsr)
+        amp_params.append(amp_paramsr)
+        fit_omega.append(fit_omegar)
+        fit_amp.append(fit_ampr)
 
-    def fit_model(self):
-        phase_params = np.zeros((len(self.names), 4))
-        amp_params = np.zeros((len(self.names), 4))
-        fit_phase = []
-        fit_amp = []
+    omega_params, amp_params = np.array(omega_params), np.array(amp_params)
 
-        circ_names, circ_q, circ_time, circ_amp, circ_phase, circ_omega = (
-            Glassware.check_double_circ(self)
-        )
+    results = {
+        "A_omega": omega_params[:, 0],
+        "B_omega": omega_params[:, 1],
+        "freq_omega": omega_params[:, 2],
+        "phi_omega": omega_params[:, 3],
+        "fit_omega": fit_omega,
+        "A_amp": amp_params[:, 0],
+        "B_amp": amp_params[:, 1],
+        "freq_amp": amp_params[:, 2],
+        "phi_amp": amp_params[:, 3],
+        "fit_amp": fit_amp,
+    }
 
-        for i in range(len(circ_omega)):
-            interp_omega_c = make_interp_spline(circ_time[i], circ_omega[i])
-            interp_amp_c = make_interp_spline(circ_time[i], circ_amp[i])
-            for j in range(len(self.names)):
-                if self.q[j] == circ_q[i]:
-                    phase_params[j], fit_phaser = fitting_eccentric_function(
-                        -59.0 / 24, self.eX_omega[j], interp_omega_c(self.new_time)
-                    )
-                    amp_params[j], fit_ampr = fitting_eccentric_function(
-                        -83.0 / 24, self.eX_amp[j], interp_amp_c(self.new_time)
-                    )
+    return results
 
-                    fit_phase.append(fit_phaser)
-                    fit_amp.append(fit_ampr)
 
-        self.A_omega = phase_params.T[0]
-        self.B_omega = phase_params.T[1]
-        self.freq_omega = phase_params.T[2]
-        self.phi_omega = phase_params.T[3]
-        self.fit_omega = fit_phase
+def get_circ_waves(waves, eccentricities):
+    circ_waves = []
 
-        self.A_amp = amp_params.T[0]
-        self.B_amp = amp_params.T[1]
-        self.freq_amp = amp_params.T[2]
-        self.phi_amp = amp_params.T[3]
-        self.fit_amp = fit_amp
+    # Every value of q should have an example where eccentricity is 0
+    for wave, eccentricity in zip(waves, eccentricities):
+        if eccentricity == 0:
+            circ_waves.append(wave)
+    return circ_waves
 
-    def compute_xquant(self):
-        xquant = []
-        for i in range(len(self.names)):
-            xquant.append(find_x(self.time[i], self.omega[i], self.new_time))
-        self.x = xquant
+
+def get_e_X(wave, eccentricity, circ_lookup, new_time, get_component, filter_comp=2):
+
+    q = np.round(wave.metadata.q, 2)
+    if q not in circ_lookup:
+        raise ValueError(f"No circular reference for q={q}")
+
+    circ_time, circ_comp = circ_lookup[q]
+    circ_interp = make_interp_spline(circ_time, circ_comp)
+    ecc_interp = make_interp_spline(wave.time, get_component(wave))
+
+    circ_vals = circ_interp(new_time)
+    ecc_vals = ecc_interp(new_time)
+
+    e_X = (ecc_vals - circ_vals) / (2.0 * circ_vals)
+
+    if eccentricity > 0:
+        e_X = savgol_filter(e_X, 1001, filter_comp)
+
+    return e_X
+
+
+def get_e_amp(wave, eccentricity, circ_lookup, new_time):
+    return get_e_X(
+        wave, eccentricity, circ_lookup, new_time, lambda w: w.amp(), filter_comp=2
+    )
+
+
+def get_e_omega(wave, eccentricity, circ_lookup, new_time):
+    return get_e_X(
+        wave,
+        eccentricity,
+        circ_lookup,
+        new_time,
+        lambda w: w.omega(),
+        filter_comp=3,
+    )
+
+
+def fitting_eccentric_function(pwr, e_amp_phase, interpol_circ):
+    x = (interpol_circ) ** pwr - (interpol_circ[0]) ** pwr
+    y = e_amp_phase
+    par, fsn = fit_sin(x, y)
+    return par, fsn
+
+
+def compute_xquant(waves, new_time):
+    x = [calculate_x(wave.time, wave.omega(), new_time) for wave in waves]
+    return x

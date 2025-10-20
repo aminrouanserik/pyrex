@@ -23,10 +23,14 @@ pip install -e .
 ```
 
 ## To-Do
-- [ ] Make Cookware a set of functions, not a class. Test every function individually (including 0 eccentricity test cases)
-- [ ] Remove circularization for now
+- [x] Make Cookware a set of functions, not a class. Test every function individually (including 0 eccentricity test cases)
 - [ ] Rewrite Glassware using qcextender (and test)
+- [ ] Make sure Glassware uses metadata for q and chi
+- [ ] Include back up for q, either take closest or generate one from model
 - [ ] Include gweccentricity
 
 ## Ideas
 - [ ] Boundary conditions for final phase and amp
+
+## Notes
+- For every mass ratio there should be a simulation with 0 eccentricity in the training set

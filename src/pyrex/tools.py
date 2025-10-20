@@ -78,14 +78,7 @@ def fit_sin(xdata, ydata):
     return popt, fit_result
 
 
-def fitting_eccentric_function(pwr, e_amp_phase, interpol_circ):
-    x = (interpol_circ) ** pwr - (interpol_circ[0]) ** pwr
-    y = e_amp_phase
-    par, fsn = fit_sin(x, y)
-    return par, fsn
-
-
-def find_x(old_time, omega, new_time):
+def calculate_x(old_time, omega, new_time):
     """
     Compute x at the beginning of new time array.
     """
@@ -95,31 +88,18 @@ def find_x(old_time, omega, new_time):
 
 
 def get_noncirc_params(somedict):
-    ecc_q = []
-    ecc_e = []
-    ecc_x = []
-    ecc_A_omega = []
-    ecc_B_omega = []
-    ecc_freq_omega = []
-    ecc_phi_omega = []
-    ecc_A_amp = []
-    ecc_B_amp = []
-    ecc_freq_amp = []
-    ecc_phi_amp = []
 
-    for i in range(len(somedict["names"])):
-        if somedict["e_ref"][i] > 3e-3:
-            ecc_q.append(somedict["q"][i])
-            ecc_e.append(somedict["e_ref"][i])
-            ecc_x.append(somedict["x"][i])
-            ecc_A_omega.append(somedict["A_omega"][i])
-            ecc_B_omega.append(somedict["B_omega"][i])
-            ecc_freq_omega.append(somedict["freq_omega"][i])
-            ecc_phi_omega.append(somedict["phi_omega"][i])
-            ecc_A_amp.append(somedict["A_amp"][i])
-            ecc_B_amp.append(somedict["B_amp"][i])
-            ecc_freq_amp.append(somedict["freq_amp"][i])
-            ecc_phi_amp.append(somedict["phi_amp"][i])
+    ecc_q = somedict["q"]
+    ecc_e = somedict["e_ref"]
+    ecc_x = somedict["x"]
+    ecc_A_omega = somedict["A_omega"]
+    ecc_B_omega = somedict["B_omega"]
+    ecc_freq_omega = somedict["freq_omega"]
+    ecc_phi_omega = somedict["phi_omega"]
+    ecc_A_amp = somedict["A_amp"]
+    ecc_B_amp = somedict["B_amp"]
+    ecc_freq_amp = somedict["freq_amp"]
+    ecc_phi_amp = somedict["phi_amp"]
 
     par_omega = [ecc_A_omega, ecc_B_omega, ecc_freq_omega, ecc_phi_omega]
     par_amp = [ecc_A_amp, ecc_B_amp, ecc_freq_amp, ecc_phi_amp]
@@ -130,7 +110,6 @@ __all__ = [
     "interp_omega",
     "f_sin",
     "fit_sin",
-    "fitting_eccentric_function",
-    "find_x",
+    "calculate_x",
     "get_noncirc_params",
 ]
