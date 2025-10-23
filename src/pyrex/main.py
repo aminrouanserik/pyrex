@@ -18,8 +18,31 @@ def glassware(q, chi, names, e_ref, outfname=None):
     waves = components(names)
     circ_waves = get_circ_waves(waves, e_ref)
 
-    e_amp, e_omega, new_time = compute_e_estimator(waves, e_ref, circ_waves)
-    results = fit_model(waves, circ_waves, new_time, e_omega, e_amp)
+    circ_lookup = {}
+
+    for c in circ_waves:
+        time = c.time
+        mask = (time > (time[0] + 250)) & (time <= -29)
+
+        t = time[mask]
+        omega = c.omega()[mask]
+        amp = c.amp()[mask]
+
+        q_key = round(c.metadata.q, 0)
+        circ_lookup[q_key] = (
+            make_interp_spline(t, omega),
+            make_interp_spline(t, amp),
+        )
+
+    # Need a common time grid for all waves for this code to work. Boundaries and length can be tinkered with
+    begin_tm = -1500.0
+    end_tm = -29
+    len_tm = 15221
+    new_time = np.linspace(begin_tm, end_tm, len_tm)
+
+    e_amp, e_omega, new_time = compute_e_estimator(waves, e_ref, circ_lookup, new_time)
+
+    results = fit_model(waves, circ_lookup, new_time, e_omega, e_amp)
     x = compute_xquant(waves, new_time)
 
     # write and store the data
@@ -35,19 +58,9 @@ def components(names):
     return sims
 
 
-def compute_e_estimator(waves, eccentricities, circ_waves):
-    # Need a common time grid for all waves for this code to work. Boundaries and length can be tinkered with
-    begin_tm = -1500.0
-    end_tm = -29
-    len_tm = 15221
-    new_time = np.linspace(begin_tm, end_tm, len_tm)
-
-    circ_lookup_amp = {
-        np.round(circ.metadata.q, 2): (circ.time, circ.amp()) for circ in circ_waves
-    }
-    circ_lookup_omega = {
-        np.round(circ.metadata.q, 2): (circ.time, circ.omega()) for circ in circ_waves
-    }
+def compute_e_estimator(waves, eccentricities, circ_lookup, new_time):
+    circ_lookup_omega = {q: pair[0] for q, pair in circ_lookup.items()}
+    circ_lookup_amp = {q: pair[1] for q, pair in circ_lookup.items()}
 
     e_amp, e_omega = [], []
     for w, e in zip(waves, eccentricities):
@@ -59,25 +72,15 @@ def compute_e_estimator(waves, eccentricities, circ_waves):
 
 def fit_model(
     waves,
-    circ_waves,
+    circ_lookup,
     new_time,
     e_omega,
     e_amp,
     omega_power=-59 / 24,
     amp_power=-83 / 24,
 ):
-    omega_params = np.zeros((len(waves), 4))
-    amp_params = np.zeros((len(waves), 4))
     omega_params, amp_params = [], []
     fit_omega, fit_amp = [], []
-
-    circ_lookup = {
-        round(c.metadata.q, 0): (
-            make_interp_spline(c.time, c.omega()),
-            make_interp_spline(c.time, c.amp()),
-        )
-        for c in circ_waves
-    }
 
     for wave, omega, amp in zip(waves, e_omega, e_amp):
 
@@ -138,9 +141,9 @@ def get_e_X(wave, eccentricity, circ_lookup, new_time, get_component, filter_com
     if q not in circ_lookup:
         raise ValueError(f"No circular reference for q={q}")
 
-    circ_time, circ_comp = circ_lookup[q]
-    circ_interp = make_interp_spline(circ_time, circ_comp)
-    ecc_interp = make_interp_spline(wave.time, get_component(wave))
+    mask = (wave.time > (wave.time[0] + 250)) & (wave.time <= -29)
+    circ_interp = circ_lookup[q]
+    ecc_interp = make_interp_spline(wave.time[mask], get_component(wave)[mask])
 
     circ_vals = circ_interp(new_time)
     ecc_vals = ecc_interp(new_time)
@@ -148,14 +151,14 @@ def get_e_X(wave, eccentricity, circ_lookup, new_time, get_component, filter_com
     e_X = (ecc_vals - circ_vals) / (2.0 * circ_vals)
 
     if eccentricity > 0:
-        e_X = savgol_filter(e_X, 1001, filter_comp)
+        e_X = savgol_filter(e_X, 501, filter_comp)
 
     return e_X
 
 
 def get_e_amp(wave, eccentricity, circ_lookup, new_time):
     return get_e_X(
-        wave, eccentricity, circ_lookup, new_time, lambda w: w.amp(), filter_comp=2
+        wave, eccentricity, circ_lookup, new_time, lambda w: w.amp(), filter_comp=3
     )
 
 
@@ -166,7 +169,7 @@ def get_e_omega(wave, eccentricity, circ_lookup, new_time):
         circ_lookup,
         new_time,
         lambda w: w.omega(),
-        filter_comp=3,
+        filter_comp=2,
     )
 
 
@@ -178,6 +181,5 @@ def fitting_eccentric_function(pwr, e_amp_phase, interpol_circ):
 
 
 def compute_xquant(waves, new_time):
-    print(waves)
     x = [calculate_x(wave.time, wave.omega(), new_time) for wave in waves]
     return x

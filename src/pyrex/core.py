@@ -205,17 +205,17 @@ def interpol_key_quant(
     Returns:
         tuple[float, float, float, float]: Interpolated fit parameters, amplitude, power, frequency, and phase.
     """
-    # forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
+    forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
     A = float(interp1D(training_quant[1], np.abs(training_keys[0]), test_quant[1]))
     B = np.log(
         (
             interp1D(
                 training_quant[1],
-                np.exp(training_keys[1]),  # np.abs(training_keys[0]) *
+                training_keys[0] * np.exp(training_keys[1]),
                 test_quant[1],
             )
         )
-        # / A
+        / forA
     )
     freq = np.sqrt(
         1.0

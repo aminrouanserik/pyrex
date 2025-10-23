@@ -1,17 +1,16 @@
 from pyrex.main import glassware
-import numpy as np
 
 sims = [
-    "SXS:BBH:0180",
+    "SXS:BBH:0180v2.0",
     "SXS:BBH:1355",
     "SXS:BBH:1357",
     "SXS:BBH:1362",
-    "SXS:BBH:1363",
-    "SXS:BBH:0184",
+    "SXS:BBH:1363v2.0",
+    "SXS:BBH:0184v2.0",
     "SXS:BBH:1364",
     "SXS:BBH:1368",
     "SXS:BBH:1369",
-    "SXS:BBH:0183",
+    "SXS:BBH:0183v2.0",
     "SXS:BBH:1373",
     "SXS:BBH:1374",
 ]
