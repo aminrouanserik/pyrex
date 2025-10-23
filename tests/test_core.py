@@ -40,7 +40,7 @@ kwargs = {
     "f_lower": 20,
     "f_ref": 25,
     "distance": 10,
-    "eccentricity": 0,
+    "eccentricity": 0.2,
 }
 
 phen_ecc = main("IMRPhenomD", [(2, 2)], **kwargs)
