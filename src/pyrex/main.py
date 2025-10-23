@@ -163,14 +163,7 @@ def get_e_amp(wave, eccentricity, circ_lookup, new_time):
 
 
 def get_e_omega(wave, eccentricity, circ_lookup, new_time):
-    return get_e_X(
-        wave,
-        eccentricity,
-        circ_lookup,
-        new_time,
-        lambda w: w.omega(),
-        filter_comp=2,
-    )
+    return get_e_X(wave, eccentricity, circ_lookup, new_time, lambda w: w.omega())
 
 
 def fitting_eccentric_function(pwr, e_amp_phase, interpol_circ):
