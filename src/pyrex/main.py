@@ -6,28 +6,26 @@ from scipy.interpolate import make_interp_spline
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
 
-class Glassware(object):
+def glassware(q, chi, names, e_ref, outfname=None):
 
-    def __init__(self, q, chi, names, e_ref, outfname=None):
+    if abs(chi) != 0.0:
+        raise ValueError(
+            "Please correct your spin, only for the non-spinning binaries, s1x=s1y=s1z=s2x=s2y=s2z=0."
+        )
+    if not all(1.0 <= i <= 3.0 for i in q):
+        raise ValueError("Please correct your mass ratio, only for q<=3.")
 
-        if abs(chi) != 0.0:
-            raise ValueError(
-                "Please correct your spin, only for the non-spinning binaries, s1x=s1y=s1z=s2x=s2y=s2z=0."
-            )
-        if not all(1.0 <= i <= 3.0 for i in q):
-            raise ValueError("Please correct your mass ratio, only for q<=3.")
+    waves = components(names)
+    circ_waves = get_circ_waves(waves, e_ref)
 
-        waves = components(names)
-        circ_waves = get_circ_waves(waves, e_ref)
+    e_amp, e_omega, new_time = compute_e_estimator(waves, e_ref, circ_waves)
+    results = fit_model(waves, circ_waves, new_time, e_omega, e_amp)
+    x = compute_xquant(waves, new_time)
 
-        e_amp, e_omega, new_time = compute_e_estimator(waves, e_ref, circ_waves)
-        results = fit_model(waves, circ_waves, new_time, e_omega, e_amp)
-        x = compute_xquant(waves, new_time)
-
-        # write and store the data
-        results.update({"q": q, "e_ref": e_ref, "x": x})
-        if outfname:
-            write_pkl(outfname, results)
+    # write and store the data
+    results.update({"q": q, "e_ref": e_ref, "x": x})
+    if outfname:
+        write_pkl(outfname, results)
 
 
 def components(names):
@@ -180,5 +178,6 @@ def fitting_eccentric_function(pwr, e_amp_phase, interpol_circ):
 
 
 def compute_xquant(waves, new_time):
+    print(waves)
     x = [calculate_x(wave.time, wave.omega(), new_time) for wave in waves]
     return x

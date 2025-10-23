@@ -62,6 +62,11 @@ def construct(
         amp_construct,
         wave.metadata.total_mass,
     )
+    phase_construct = smooth_joint(
+        time_construct,
+        phase_construct,
+        wave.metadata.total_mass,
+    )
 
     return time_construct, phase_construct, amp_construct
 
@@ -107,7 +112,7 @@ def eccentric_from_circular(
     omega = units.fSI_to_fM(wave.omega(), wave.metadata.total_mass)
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
 
-    # Lower bound shouldn't be hardcoded
+    # Lower bound dependent on the fit, in this case -1500
     mask = np.where((time > -1500) & (time < -29))
     new_time = time[mask]
 
@@ -200,17 +205,17 @@ def interpol_key_quant(
     Returns:
         tuple[float, float, float, float]: Interpolated fit parameters, amplitude, power, frequency, and phase.
     """
-    forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
+    # forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
     A = float(interp1D(training_quant[1], np.abs(training_keys[0]), test_quant[1]))
     B = np.log(
         (
             interp1D(
                 training_quant[1],
-                training_keys[0] * np.exp(training_keys[1]),
+                np.exp(training_keys[1]),  # np.abs(training_keys[0]) *
                 test_quant[1],
             )
         )
-        / forA
+        # / A
     )
     freq = np.sqrt(
         1.0

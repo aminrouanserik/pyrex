@@ -103,11 +103,9 @@ def interp1D(trainkey, trainval, testkey):
 
     if testkey < min(trainkey) or testkey > max(trainkey):
         interp = interpolate.interp1d(newkey, newval, fill_value="extrapolate")
-        result = interp(testkey)
     else:
-        interp = interpolate.interp1d(trainkey, trainval)
-        result = interp(testkey)
-    return result
+        interp = interpolate.interp1d(newkey, newval)
+    return interp(testkey)
 
 
 def check_duplicate_training(trainkey, trainval):

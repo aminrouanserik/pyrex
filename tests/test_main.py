@@ -1,4 +1,4 @@
-from pyrex.main import Glassware
+from pyrex.main import glassware
 import numpy as np
 
 sims = [
@@ -18,7 +18,7 @@ sims = [
 q = [1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0]
 e_ref = [0.0, 0.053, 0.097, 0.189, 0.192, 0.0, 0.044, 0.097, 0.185, 0.0, 0.093, 0.18]
 
-training = Glassware(
+training = glassware(
     q=q,
     chi=0,
     names=sims,
