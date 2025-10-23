@@ -1,6 +1,6 @@
 [project]
 name = "pyrex"
-version = "0.1.4"
+version = "0.1.5"
 description = "Adding eccentricity to quasi-circular waveforms."
 readme = "README.md"
 authors = [

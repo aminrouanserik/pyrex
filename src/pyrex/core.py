@@ -113,7 +113,7 @@ def eccentric_from_circular(
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
 
     # Lower bound dependent on the fit, in this case -1500
-    mask = np.where((time > -1500) & (time < -29))
+    mask = np.where((time < -29))
     new_time = time[mask]
 
     x = omega[mask][0] ** (2 / 3)

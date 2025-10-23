@@ -18,12 +18,12 @@ mass1 = mass2 = 25
 dimension = dimensionless.to_Waveform(25, mass1 + mass2, distance)
 
 kwargs = {
-    "mass1": 25,
-    "mass2": 25,
+    "mass1": 10,
+    "mass2": 10,
     "inclination": 0,
     "coa_phase": 0,
     "delta_t": 1.0 / 4196,
-    "f_lower": 25,
+    "f_lower": 20,
     "f_ref": 25,
     "distance": 10,
 }
@@ -32,12 +32,12 @@ phenom = Waveform.from_model("IMRPhenomD", [(2, 2)], **kwargs)
 seob = Waveform.from_model("SEOBNRv4", [(2, 2)], **kwargs)
 
 kwargs = {
-    "mass1": 25,
-    "mass2": 25,
+    "mass1": 10,
+    "mass2": 10,
     "inclination": 0,
     "coa_phase": 0,
     "delta_t": 1.0 / 4196,
-    "f_lower": 25,
+    "f_lower": 20,
     "f_ref": 25,
     "distance": 10,
     "eccentricity": 0,
