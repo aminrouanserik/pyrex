@@ -7,12 +7,13 @@ from qcextender.waveform import Waveform
 from qcextender import units
 
 
-def main(approximant: str, mode: list[tuple[int, int]], **kwargs) -> Waveform:
+def main(approximant: str, mode: list[tuple[int, int]], cut=True, **kwargs) -> Waveform:
     """Generates a qcextender Waveform object and returns with added eccentricity modulations.
 
     Args:
         approximant (str): Quasi-circular approximant to generate the initial Waveform with.
         mode (list[tuple[int, int]]): Which mode to generate and add eccentricity modulations to.
+        cut (bool, optional): cut decides whether to cut the resulting waveform at -1500M. Defaults to True.
 
     Returns:
         Waveform: Waveform object with added eccentricity modulations.
@@ -29,7 +30,7 @@ def main(approximant: str, mode: list[tuple[int, int]], **kwargs) -> Waveform:
 
 
 def construct(
-    wave: Waveform, mode: tuple[int, int], q: float, eccentricity: float
+    wave: Waveform, mode: tuple[int, int], q: float, eccentricity: float, cut: bool
 ) -> tuple[np.ndarray]:
     """Constrcuts a new Waveform strain by adding eccentricity to the inspiral and connects it to the original circular merger.
 
@@ -38,6 +39,7 @@ def construct(
         mode (tuple[int, int]): Mode, unused but required for Waveform.add_eccentricity().
         q (float): Mass ratio of the binary, always above 1.
         eccentricity (float): Eccentricity to be added to the quasi-circular waveform.
+        cut (bool): cut decides whether to cut the resulting waveform at -1500M.
 
     Returns:
         tuple[np.ndarray]: The time, phase and amplitude of the new, eccentric Waveform.
@@ -93,6 +95,7 @@ def eccentric_from_circular(
     wave: Waveform,
     q: float,
     eccentricity: float,
+    cut: bool,
     phase_pwr: float = -59.0 / 24,
     amp_pwr: float = -83.0 / 24,
 ) -> tuple[np.ndarray]:
@@ -102,6 +105,7 @@ def eccentric_from_circular(
         wave (Waveform): Quasi-circular Waveform to add eccentricity to.
         q (float): Mass ratio of the binary, always above 1.
         eccentricity (float): Eccentricity to be added to the quasi-circular waveform.
+        cut (bool): cut decides whether to cut the resulting waveform at -1500M.
         phase_pwr (float, optional): Power in the power law for the phase modulations. Defaults to -59.0/24.
         amp_pwr (float, optional): Power in the power law for the amplitude modulations. Defaults to -83.0/24.
 
@@ -113,7 +117,10 @@ def eccentric_from_circular(
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
 
     # Lower bound dependent on the fit, in this case -1500
-    mask = np.where((time < -29))
+    if cut:
+        mask = np.where((time > -1500) & (time < -29))
+    else:
+        mask = np.where((time < -29))
     new_time = time[mask]
 
     x = omega[mask][0] ** (2 / 3)
@@ -131,8 +138,8 @@ def eccentric_from_circular(
         amp_circ = amp[mask]
 
         # Arbitrary shift is crucial
-        shift_omega = omega[0]
-        shift_amp = amp[0]
+        shift_omega = omega[(np.abs(new_time + 1500)).argmin()]
+        shift_amp = amp[(np.abs(new_time + 1500)).argmin()]
 
         x_omega = omega_circ**phase_pwr - shift_omega**phase_pwr
         x_amp = amp_circ**amp_pwr - shift_amp**amp_pwr
