@@ -21,10 +21,7 @@ def main(approximant: str, mode: list[tuple[int, int]], cut=True, **kwargs) -> W
     eccentricity = kwargs.pop("eccentricity")
     wave = Waveform.from_model(approximant, mode, **kwargs)
 
-    kwargs = {
-        "q": wave.metadata.q,
-        "eccentricity": eccentricity,
-    }
+    kwargs = {"q": wave.metadata.q, "eccentricity": eccentricity, "cut": cut}
     newwave = wave.add_eccentricity(construct, kwargs, eccentricity)
     return newwave
 
@@ -46,7 +43,7 @@ def construct(
     """
     # masked_waveform returns one extra index to allow for phase alignment
     early_time, amp_rec, phase_rec, mask = eccentric_from_circular(
-        wave, q, eccentricity
+        wave, q, eccentricity, cut
     )
     late_time, late_amp, late_phase = sliced_waveform(wave, mask[0][-1])
 
