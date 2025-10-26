@@ -27,4 +27,4 @@ dev = [
 ]
 
 [tool.uv.sources]
-qcextender = { path = "qcextender-0.3.0.tar.gz" }
+qcextender = { path = "qcextender-0.3.1.tar.gz" }

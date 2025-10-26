@@ -19,8 +19,7 @@ e_ref = [0.0, 0.053, 0.097, 0.189, 0.192, 0.0, 0.044, 0.097, 0.185, 0.0, 0.093, 
 
 training = glassware(
     q=q,
-    chi=0,
     names=sims,
     e_ref=e_ref,
-    outfname="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/pyrexdata.pkl",
+    outfname="/home/amin/ProjectsA/Projects/School/Masters/25_26-Thesis/pyrex/data/pyrexdata.pkl",
 )

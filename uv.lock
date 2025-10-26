@@ -1357,7 +1357,7 @@ wheels = [
 
 [[package]]
 name = "pyrex"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "." }
 dependencies = [
     { name = "pickleshare" },
@@ -1375,7 +1375,7 @@ dev = [
 requires-dist = [
     { name = "pickleshare", specifier = ">=0.7.5" },
     { name = "pycbc", specifier = ">=2.9.0" },
-    { name = "qcextender", path = "qcextender-0.3.0.tar.gz" },
+    { name = "qcextender", path = "qcextender-0.3.1.tar.gz" },
     { name = "scipy", specifier = ">=1.16.2" },
 ]
 
@@ -1490,13 +1490,13 @@ wheels = [
 
 [[package]]
 name = "qcextender"
-version = "0.3.0"
-source = { path = "qcextender-0.3.0.tar.gz" }
+version = "0.3.1"
+source = { path = "qcextender-0.3.1.tar.gz" }
 dependencies = [
     { name = "pycbc" },
     { name = "sxs" },
 ]
-sdist = { hash = "sha256:dd300b64d95dd6d20c4a02e214c6bb9971a9ada5ee9231dbd82995d8d645cf25" }
+sdist = { hash = "sha256:c5cf8640c776893a79d5e8618a8f2c7491b082e2620d7f6699f5751645b5ab2c" }
 
 [package.metadata]
 requires-dist = [
