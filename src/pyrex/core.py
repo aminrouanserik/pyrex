@@ -19,6 +19,8 @@ def main(approximant: str, mode: list[tuple[int, int]], cut=True, **kwargs) -> W
         Waveform: Waveform object with added eccentricity modulations.
     """
     eccentricity = kwargs.pop("eccentricity")
+    if eccentricity == 0:
+        eccentricity = 1e-30
     wave = Waveform.from_model(approximant, mode, **kwargs)
 
     kwargs = {"q": wave.metadata.q, "eccentricity": eccentricity, "cut": cut}
