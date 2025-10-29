@@ -21,3 +21,6 @@ git clone git@github.com:aminrouanserik/pyrex.git
 cd pyrex
 pip install -e .
 ```
+
+## Notes
+- For every mass ratio there should be a simulation with 0 eccentricity in the training set
