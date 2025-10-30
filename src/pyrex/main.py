@@ -3,14 +3,15 @@ from pyrex.tools import fit_sin, calculate_x
 from pyrex.basics import write_pkl
 from scipy.signal import savgol_filter
 from scipy.interpolate import make_interp_spline
+from gw_eccentricity import measure_eccentricity
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
 
 def glassware(
     q: list[float],
     names: list[str],
-    e_ref: list[float],
     outfname: str,
+    e_ref: list[float] = None,
 ) -> None:
     """Fits eccentric contributions to the amplitude and instantaneous frequency. Please make sure that every
     mass ratio has a complimentary zero eccentricity simulation.
@@ -18,12 +19,33 @@ def glassware(
     Args:
         q (list[float]): List of mass ratios of the binary simulations.
         names (list[str]): List of SXS simulation names of the binary simulations.
-        e_ref (list[float]): List of eccentricities at the reference frequency of the binary simulations.
         outfname (str): The filename in which to save the fit parameters.
+        e_ref (list[float]): List of eccentricities at the reference frequency of the binary simulations.
+        Defaults to None, in which case it is calculted by `gw_eccentricity`.
 
     Output:
         File called outfname.pkl.
     """
+    if not e_ref:
+        e_ref = []
+        fref_in = 0.0075
+        for name in names:
+            sim = DimensionlessWaveform.from_sim(name)
+            try:
+                return_dict = measure_eccentricity(
+                    fref_in=fref_in,
+                    method="ResidualAmplitude",
+                    dataDict={
+                        "t": sim.time,
+                        "hlm": {(2, 2): sim[2, 2]},
+                    },
+                )
+                eccentricity = return_dict["eccentricity"]
+            except:
+                eccentricity = 0
+            # mean_anomaly = return_dict["mean_anomaly"]
+            e_ref.append(eccentricity)
+
     waves = components(names)
     circ_waves = get_circ_waves(waves, e_ref)
 
