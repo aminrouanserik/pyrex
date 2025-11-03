@@ -7,7 +7,13 @@ from qcextender.waveform import Waveform
 from qcextender import units
 
 
-def main(approximant: str, mode: list[tuple[int, int]], cut=True, **kwargs) -> Waveform:
+def main(
+    approximant: str,
+    mode: list[tuple[int, int]],
+    dirfile: str = "/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/",
+    cut: bool = True,
+    **kwargs,
+) -> Waveform:
     """Generates a qcextender Waveform object and returns with added eccentricity modulations.
 
     Args:
@@ -23,13 +29,26 @@ def main(approximant: str, mode: list[tuple[int, int]], cut=True, **kwargs) -> W
         eccentricity = 1e-30
     wave = Waveform.from_model(approximant, mode, **kwargs)
 
-    kwargs = {"q": wave.metadata.q, "eccentricity": eccentricity, "cut": cut}
+    training = get_filename(dirfile)
+    training_dict = read_pkl(training)
+
+    kwargs = {
+        "training_dict": training_dict,
+        "q": wave.metadata.q,
+        "eccentricity": eccentricity,
+        "cut": cut,
+    }
     newwave = wave.add_eccentricity(construct, kwargs, eccentricity)
     return newwave
 
 
 def construct(
-    wave: Waveform, mode: tuple[int, int], q: float, eccentricity: float, cut: bool
+    wave: Waveform,
+    mode: tuple[int, int],
+    training_dict: dict,
+    q: float,
+    eccentricity: float,
+    cut: bool,
 ) -> tuple[np.ndarray]:
     """Constrcuts a new Waveform strain by adding eccentricity to the inspiral and connects it to the original circular merger.
 
@@ -45,7 +64,7 @@ def construct(
     """
     # masked_waveform returns one extra index to allow for phase alignment
     early_time, amp_rec, phase_rec, mask = eccentric_from_circular(
-        wave, q, eccentricity, cut
+        wave, training_dict, q, eccentricity, cut
     )
     late_time, late_amp, late_phase = sliced_waveform(wave, mask[0][-1])
 
@@ -92,6 +111,7 @@ def sliced_waveform(wave: Waveform, index: int) -> tuple[np.ndarray]:
 
 def eccentric_from_circular(
     wave: Waveform,
+    training_dict: dict,
     q: float,
     eccentricity: float,
     cut: bool,
@@ -125,8 +145,6 @@ def eccentric_from_circular(
     x = omega[mask][0] ** (2 / 3)
 
     # check requirements
-    training = get_filename()
-    training_dict = read_pkl(training)
     par_omega, par_amp = get_fit_params(training_dict, q, eccentricity, x)
 
     if not np.any(omega):

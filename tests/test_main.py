@@ -21,5 +21,5 @@ training = glassware(
     q=q,
     names=sims,
     e_ref=e_ref,
-    outfname="/home/amin/ProjectsA/Projects/School/Masters/25_26-Thesis/pyrex/data/pyrexdata.pkl",
+    outfname="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/pyrexdata.pkl",
 )

@@ -1,6 +1,5 @@
 import pickle
-import glob
-import os
+from pathlib import Path
 from scipy import interpolate
 import statistics
 
@@ -32,43 +31,38 @@ def write_pkl(outfname: str, data_dict: dict) -> None:
 
 
 def get_filename(
-    dirfile: str = "/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/",
+    dirfile: str,
 ) -> str:
-    """Get the filename of the pickle data file.
+    """Return the full path to the single pickle file in `dirfile`.
 
     Args:
-        dirfile (str, optional): Directory in which pickle file is stored. Defaults to "/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/".
+        dirfile (str): Directory in which pickle file is stored.
 
     Raises:
-        ValueError: Raised if there are no pickle files in the directory,
-        ValueError: Raised if more than one pickle file was found.
+        ValueError: If no pickle files or more than one are found.
 
     Returns:
-        str: Path to the pickle file.
+        str: Absolute path to the pickle file.
     """
-    r = 0
-    os.chdir(dirfile)
+    data_dir = Path(dirfile).expanduser().resolve()
 
-    for file in glob.glob("*.pkl"):
-        r += 1
-    if r < 1:
-        raise ValueError(
-            "No *pkl files found in "
-            + str(dirfile)
-            + " . Please run 'example/traindata.py' to produce the train data."
-        )
-    if r > 1:
-        raise ValueError(
-            "Found "
-            + str(r)
-            + "*pkl files in "
-            + dirfile
-            + " . Please remove other *pkl files than the training data."
-        )
-    else:
-        dfs = dirfile + str(file)
+    if not data_dir.is_dir():
+        raise ValueError(f"Directory not found: {data_dir}")
 
-    return dfs
+    pkl_files = list(data_dir.glob("*.pkl"))
+
+    if len(pkl_files) == 0:
+        raise ValueError(
+            f"No *.pkl files found in {data_dir}. "
+            "Run 'example/traindata.py' to produce the training data."
+        )
+    if len(pkl_files) > 1:
+        raise ValueError(
+            f"Found {len(pkl_files)} *.pkl files in {data_dir}. "
+            "Please keep only the intended training data file."
+        )
+
+    return str(pkl_files[0])
 
 
 def interp1D(
@@ -89,7 +83,7 @@ def interp1D(
     if testkey < min(trainkey) or testkey > max(trainkey):
         interp = interpolate.interp1d(newkey, newval, fill_value="extrapolate")
     else:
-        interp = interpolate.interp1d(trainkey, trainval)
+        interp = interpolate.interp1d(newkey, newval)
     return interp(testkey)
 
 

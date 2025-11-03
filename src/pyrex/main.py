@@ -8,33 +8,39 @@ from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
 
 def glassware(
-    q: list[float],
     names: list[str],
     outfname: str,
+    q: list[float] = None,
     e_ref: list[float] = None,
 ) -> None:
     """Fits eccentric contributions to the amplitude and instantaneous frequency. Please make sure that every
     mass ratio has a complimentary zero eccentricity simulation.
 
     Args:
-        q (list[float]): List of mass ratios of the binary simulations.
         names (list[str]): List of SXS simulation names of the binary simulations.
         outfname (str): The filename in which to save the fit parameters.
-        e_ref (list[float]): List of eccentricities at the reference frequency of the binary simulations.
+        q (list[float], optional): List of mass ratios of the binary simulations. Defaults to None, in which case the simulation
+        metadata is used.
+        e_ref (list[float], optional): List of eccentricities at the reference frequency of the binary simulations.
         Defaults to None, in which case it is calculted by `gw_eccentricity`.
 
     Output:
         File called outfname.pkl.
     """
+    if not q:
+        q = []
+
     if not e_ref:
         e_ref = []
         fref_in = 0.0075
         for name in names:
             sim = DimensionlessWaveform.from_sim(name)
+            if len(q) < len(names):
+                q.append(sim.metadata.q)
             try:
                 return_dict = measure_eccentricity(
                     fref_in=fref_in,
-                    method="ResidualAmplitude",
+                    method="Amplitude",
                     dataDict={
                         "t": sim.time,
                         "hlm": {(2, 2): sim[2, 2]},
@@ -59,7 +65,7 @@ def glassware(
         omega = c.omega()[mask]
         amp = c.amp()[mask]
 
-        q_key = round(c.metadata.q, 0)
+        q_key = round(c.metadata.q, 1)
         circ_lookup[q_key] = (
             make_interp_spline(t, omega),
             make_interp_spline(t, amp),
@@ -242,7 +248,7 @@ def get_e_X(
     Returns:
         np.ndarray: The eccentricity caused contribution to the amplitude or instantaneous frequency for `wave`.
     """
-    q = np.round(wave.metadata.q, 2)
+    q = np.round(wave.metadata.q, 1)
     if q not in circ_lookup:
         raise ValueError(f"No circular reference for q={q}")
 

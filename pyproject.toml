@@ -1,6 +1,6 @@
 [project]
 name = "pyrex"
-version = "0.3.0"
+version = "0.3.1"
 description = "Adding eccentricity to quasi-circular waveforms."
 readme = "README.md"
 authors = [
@@ -14,9 +14,6 @@ dependencies = [
     "qcextender",
     "scipy>=1.16.2",
 ]
-
-[project.scripts]
-pyrex = "pyrex:main"
 
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]
