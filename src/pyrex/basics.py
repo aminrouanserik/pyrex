@@ -30,41 +30,6 @@ def write_pkl(outfname: str, data_dict: dict) -> None:
     f.close()
 
 
-def get_filename(
-    dirfile: str,
-) -> str:
-    """Return the full path to the single pickle file in `dirfile`.
-
-    Args:
-        dirfile (str): Directory in which pickle file is stored.
-
-    Raises:
-        ValueError: If no pickle files or more than one are found.
-
-    Returns:
-        str: Absolute path to the pickle file.
-    """
-    data_dir = Path(dirfile).expanduser().resolve()
-
-    if not data_dir.is_dir():
-        raise ValueError(f"Directory not found: {data_dir}")
-
-    pkl_files = list(data_dir.glob("*.pkl"))
-
-    if len(pkl_files) == 0:
-        raise ValueError(
-            f"No *.pkl files found in {data_dir}. "
-            "Run 'example/traindata.py' to produce the training data."
-        )
-    if len(pkl_files) > 1:
-        raise ValueError(
-            f"Found {len(pkl_files)} *.pkl files in {data_dir}. "
-            "Please keep only the intended training data file."
-        )
-
-    return str(pkl_files[0])
-
-
 def interp1D(
     trainkey: list[float], trainval: list[float], testkey: list[float]
 ) -> list[float]:

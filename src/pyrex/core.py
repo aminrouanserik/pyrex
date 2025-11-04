@@ -10,7 +10,7 @@ from qcextender import units
 def main(
     approximant: str,
     mode: list[tuple[int, int]],
-    dirfile: str = "/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/",
+    dirfile: str = "/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/pyrexdata.pkl",
     cut: bool = True,
     **kwargs,
 ) -> Waveform:
@@ -29,8 +29,7 @@ def main(
         eccentricity = 1e-30
     wave = Waveform.from_model(approximant, mode, **kwargs)
 
-    training = get_filename(dirfile)
-    training_dict = read_pkl(training)
+    training_dict = read_pkl(dirfile)
 
     kwargs = {
         "training_dict": training_dict,
@@ -232,14 +231,12 @@ def interpol_key_quant(
     forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
     A = float(interp1D(training_quant[1], np.abs(training_keys[0]), test_quant[1]))
     B = np.log(
-        (
-            interp1D(
-                training_quant[1],
-                training_keys[0] * np.exp(training_keys[1]),
-                test_quant[1],
-            )
+        interp1D(
+            training_quant[1],
+            np.exp(training_keys[1]) * np.abs(training_keys[0]),
+            test_quant[1],
         )
-        / forA
+        / A
     )
     freq = np.sqrt(
         1.0
