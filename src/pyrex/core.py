@@ -1,6 +1,6 @@
 import numpy as np
 from pyrex.tools import get_noncirc_params, f_sin
-from pyrex.basics import interp1D, get_filename, read_pkl
+from pyrex.basics import interp1D, read_pkl, interpolate_quantities
 from scipy import integrate
 from scipy.signal import savgol_filter
 from qcextender.waveform import Waveform
@@ -211,10 +211,12 @@ def get_fit_params(
     omega_params = [A_omega, B_omega, freq_omega, phi_omega]
     amp_params = [A_amp, B_amp, freq_amp, phi_amp]
 
+    print(f"{omega_params=}")
+    print(f"{amp_params=}")
+
     return omega_params, amp_params
 
 
-# Investigation necessary
 def interpol_key_quant(
     training_quant: list[list], training_keys: list[list], test_quant: list[list]
 ) -> tuple[float, float, float, float]:
@@ -228,22 +230,33 @@ def interpol_key_quant(
     Returns:
         tuple[float, float, float, float]: Interpolated fit parameters, amplitude, power, frequency, and phase.
     """
-    forA = float(interp1D(training_quant[1], training_keys[0], test_quant[1]))
-    A = float(interp1D(training_quant[1], np.abs(training_keys[0]), test_quant[1]))
-    B = np.log(
-        interp1D(
+    A = float(
+        interpolate_quantities(
             training_quant[1],
+            training_quant[0],
+            np.abs(training_keys[0]),
+            test_quant[1],
+            test_quant[0],
+        )
+    )
+    B = np.log(
+        interpolate_quantities(
+            training_quant[1],
+            training_quant[0],
             np.exp(training_keys[1]) * np.abs(training_keys[0]),
             test_quant[1],
+            test_quant[0],
         )
         / A
     )
     freq = np.sqrt(
         1.0
         / (
-            interp1D(
+            interpolate_quantities(
+                training_quant[1],
                 np.asarray(training_quant[0]),
                 1.0 / np.asarray(training_keys[2]) ** 2,
+                test_quant[1],
                 test_quant[0],
             )
         )

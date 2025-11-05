@@ -1,6 +1,6 @@
 import pickle
-from pathlib import Path
-from scipy import interpolate
+import numpy as np
+from scipy.interpolate import interp1d, LinearNDInterpolator
 import statistics
 
 
@@ -46,10 +46,16 @@ def interp1D(
     newkey, newval = check_duplicate_training(trainkey, trainval)
 
     if testkey < min(trainkey) or testkey > max(trainkey):
-        interp = interpolate.interp1d(newkey, newval, fill_value="extrapolate")
+        interp = interp1d(newkey, newval, fill_value="extrapolate")
     else:
-        interp = interpolate.interp1d(newkey, newval)
+        interp = interp1d(newkey, newval)
     return interp(testkey)
+
+
+def interpolate_quantities(eccentricities, mass_ratios, interpolant_values, e, q):
+    coordinates = np.array([eccentricities, mass_ratios]).T
+    interpolator = LinearNDInterpolator(coordinates, interpolant_values)
+    return interpolator(e, q)
 
 
 def check_duplicate_training(
