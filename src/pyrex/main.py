@@ -27,6 +27,8 @@ def glassware(
     Output:
         File called outfname.pkl.
     """
+    waves = []
+
     if not q:
         q = []
 
@@ -35,36 +37,40 @@ def glassware(
         fref_in = 0.0075
         for name in names:
             sim = DimensionlessWaveform.from_sim(name)
-            if len(q) < len(names):
-                q.append(sim.metadata.q)
             try:
-                return_dict = measure_eccentricity(
+                result = measure_eccentricity(
                     fref_in=fref_in,
                     method="Amplitude",
-                    dataDict={
-                        "t": sim.time,
-                        "hlm": {(2, 2): sim[2, 2]},
-                    },
+                    dataDict={"t": sim.time, "hlm": {(2, 2): sim[2, 2]}},
                 )
-                eccentricity = return_dict["eccentricity"]
-            except:
-                eccentricity = 0
-            # mean_anomaly = return_dict["mean_anomaly"]
-            e_ref.append(eccentricity)
+                e = result["eccentricity"]
+            except Exception:
+                e = 0.0
+            e_ref.append(e)
+            q.append(sim.metadata.q)
+            waves.append(sim)
 
-    waves = components(names)
-    circ_waves = get_circ_waves(waves, e_ref)
+    threshold = 1e-4
+    circ_waves, circ_q, circ_e = [], [], []
+    ecc_waves, ecc_q, ecc_e = [], [], []
+
+    for w, e, qv in zip(waves, e_ref, q):
+        if e < threshold:
+            circ_waves.append(w)
+            circ_q.append(qv)
+            circ_e.append(e)
+        else:
+            ecc_waves.append(w)
+            ecc_q.append(qv)
+            ecc_e.append(e)
 
     circ_lookup = {}
-
     for c in circ_waves:
         time = c.time
         mask = (time > (time[0] + 250)) & (time <= -29)
-
         t = time[mask]
         omega = c.omega()[mask]
         amp = c.amp()[mask]
-
         q_key = round(c.metadata.q, 1)
         circ_lookup[q_key] = (
             make_interp_spline(t, omega),
@@ -77,13 +83,13 @@ def glassware(
     len_tm = 15221
     new_time = np.linspace(begin_tm, end_tm, len_tm)
 
-    e_amp, e_omega = compute_e_estimator(waves, e_ref, circ_lookup, new_time)
+    e_amp, e_omega = compute_e_estimator(ecc_waves, e_ref, circ_lookup, new_time)
 
-    results = fit_model(waves, circ_lookup, new_time, e_omega, e_amp)
-    x = compute_xquant(waves, new_time)
+    results = fit_model(ecc_waves, circ_lookup, new_time, e_omega, e_amp)
+    x = compute_xquant(ecc_waves, new_time)
 
     # write and store the data
-    results.update({"q": q, "e_ref": e_ref, "x": x})
+    results.update({"q": ecc_q, "e_ref": ecc_e, "x": x})
     if outfname:
         write_pkl(outfname, results)
 

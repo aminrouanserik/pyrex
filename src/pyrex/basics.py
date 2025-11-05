@@ -1,6 +1,6 @@
 import pickle
 import numpy as np
-from scipy.interpolate import interp1d, LinearNDInterpolator
+from scipy.interpolate import interp1d, RBFInterpolator
 import statistics
 
 
@@ -54,8 +54,8 @@ def interp1D(
 
 def interpolate_quantities(eccentricities, mass_ratios, interpolant_values, e, q):
     coordinates = np.array([eccentricities, mass_ratios]).T
-    interpolator = LinearNDInterpolator(coordinates, interpolant_values)
-    return interpolator(e, q)
+    interpolator = RBFInterpolator(coordinates, interpolant_values, kernel="linear")
+    return interpolator(np.column_stack([np.atleast_1d(e), np.atleast_1d(q)])).squeeze()
 
 
 def check_duplicate_training(

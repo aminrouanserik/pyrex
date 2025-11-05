@@ -211,9 +211,6 @@ def get_fit_params(
     omega_params = [A_omega, B_omega, freq_omega, phi_omega]
     amp_params = [A_amp, B_amp, freq_amp, phi_amp]
 
-    print(f"{omega_params=}")
-    print(f"{amp_params=}")
-
     return omega_params, amp_params
 
 
