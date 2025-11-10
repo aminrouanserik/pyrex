@@ -71,7 +71,7 @@ def glassware(
         t = time[mask]
         omega = c.omega()[mask]
         amp = c.amp()[mask]
-        q_key = round(c.metadata.q, 1)
+        q_key = round(c.metadata.q, 2)
         circ_lookup[q_key] = (
             make_interp_spline(t, omega),
             make_interp_spline(t, amp),
@@ -83,10 +83,10 @@ def glassware(
     len_tm = 15221
     new_time = np.linspace(begin_tm, end_tm, len_tm)
 
-    e_amp, e_omega = compute_e_estimator(ecc_waves, e_ref, circ_lookup, new_time)
+    e_amp, e_omega = compute_e_estimator(waves, e_ref, circ_lookup, new_time)
 
-    results = fit_model(ecc_waves, circ_lookup, new_time, e_omega, e_amp)
-    x = compute_xquant(ecc_waves, new_time)
+    results = fit_model(waves, circ_lookup, new_time, e_omega, e_amp)
+    x = compute_xquant(waves, new_time)
 
     # write and store the data
     results.update({"q": ecc_q, "e_ref": ecc_e, "x": x})
@@ -169,7 +169,7 @@ def fit_model(
     for wave, omega, amp in zip(waves, e_omega, e_amp):
 
         # This needs to be fixed throughout, just take closest q instead or take from model instead.
-        q = round(wave.metadata.q, 0)
+        q = round(wave.metadata.q, 2)
 
         if q not in circ_lookup:
             raise ValueError(f"No circular reference for q={q}")
@@ -348,3 +348,25 @@ def compute_xquant(
     """
     x = [calculate_x(wave.time, wave.omega(), new_time) for wave in waves]
     return x
+
+
+if __name__ == "__main__":
+    sims = [
+        "SXS:BBH:0180v2.0",
+        "SXS:BBH:1355",
+        "SXS:BBH:1357",
+        "SXS:BBH:1362",
+        "SXS:BBH:1363v2.0",
+        "SXS:BBH:0184v2.0",
+        "SXS:BBH:1364",
+        "SXS:BBH:1368",
+        "SXS:BBH:1369",
+        "SXS:BBH:0183v2.0",
+        "SXS:BBH:1373",
+        "SXS:BBH:1374",
+    ]
+
+    training = glassware(
+        names=sims,
+        outfname="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/pyrexdata.pkl",
+    )

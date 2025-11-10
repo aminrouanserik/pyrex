@@ -52,8 +52,18 @@ def fit_sin(xdata: np.ndarray, ydata: np.ndarray) -> tuple[np.ndarray, np.ndarra
     Returns:
         tuple[np.ndarray, np.ndarray]: Optimal values for the parameter and its evaluation.
     """
-    popt, _ = curve_fit(f_sin, xdata, ydata)
+    lower_bounds = [-np.inf, 0.0, -np.inf, -np.inf]
+    upper_bounds = [np.inf, 1e-2, np.inf, np.inf]
+
+    popt, _ = curve_fit(
+        f_sin,
+        xdata,
+        ydata,
+        p0=[0.1, 5e-4, 0.1, -2000],
+        bounds=(lower_bounds, upper_bounds),
+    )
     fit_result = f_sin(xdata, *popt)
+
     return popt, fit_result
 
 
