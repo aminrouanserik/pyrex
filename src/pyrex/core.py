@@ -1,10 +1,11 @@
 import numpy as np
-from pyrex.tools import get_noncirc_params, f_sin
-from pyrex.basics import interp1D, read_pkl, interpolate_quantities
+from qcextender import units
+from qcextender.waveform import Waveform
 from scipy import integrate
 from scipy.signal import savgol_filter
-from qcextender.waveform import Waveform
-from qcextender import units
+
+from pyrex.basics import interp1D, interpolate_quantities, read_pkl
+from pyrex.tools import f_sin, get_noncirc_params
 
 
 def main(
@@ -197,8 +198,8 @@ def get_fit_params(
     """
 
     train_q, train_ecc, train_x, omega, amp = get_noncirc_params(training_dict)
-    training_quant = [train_q, train_ecc, train_x]
 
+    training_quant = [train_q, train_ecc, train_x]
     test_quant = [q, eccentricity, x]
 
     A_omega, B_omega, freq_omega, phi_omega = interpol_key_quant(
@@ -265,6 +266,9 @@ def interpol_key_quant(
             np.asarray(test_quant[2]),
         )
     )
+
+    e = test_quant[1]
+    A = A * (e / (e + 1e-6))
 
     return A, B, freq, phi
 

@@ -1,18 +1,24 @@
 [project]
 name = "pyrex"
-version = "0.5.0"
+version = "0.6.0"
 description = "Adding eccentricity to quasi-circular waveforms."
 readme = "README.md"
-authors = [
-    { email = "aminrouanserik@gmail.com" }
-]
+authors = [{ name = "Amin Rouan Serik", email = "aminrouanserik@gmail.com" }]
+license = { text = "MIT" }
 requires-python = ">=3.12"
+keywords = ["gravitational-waves", "eccentricity", "waveforms", "astrophysics"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
 dependencies = [
-    "gw-eccentricity>=2.0.0",
-    "pickleshare>=0.7.5",
-    "pycbc>=2.9.0",
-    "qcextender",
-    "scipy>=1.16.2",
+    "gw-eccentricity>=2.0.0,<3.0.0",
+    "pickleshare>=0.7.5,<0.8.0",
+    "pycbc>=2.9.0,<3.0.0",
+    "qcextender>=0.3.1,<0.5.0",
+    "scipy>=1.16.2,<2.0.0",
 ]
 
 [build-system]
@@ -22,7 +28,21 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "ipykernel>=6.30.1",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.0",
+    "mkdocstrings[python]>=0.30.1",
+    "pytest>=9.0.1",
 ]
 
 [tool.uv.sources]
 qcextender = { path = "qcextender-0.3.1.tar.gz" }
+
+[tool.pytest.ini_options]
+addopts = "-v"
+testpaths = ["tests"]
+
+[project.urls]
+Homepage = "https://github.com/aminrouanserik/pyrex"
+Repository = "https://github.com/aminrouanserik/pyrex"
+Documentation = "https://aminrouanserik.github.io/pyrex/"
+Issues = "https://github.com/aminrouanserik/pyrex/issues"

@@ -1,4 +1,4 @@
-from pyrex.main import glassware
+from pyrex.eccentric_fit import fit_waveform_eccentricity
 
 sims = [
     "SXS:BBH:0180v2.0",
@@ -17,9 +17,9 @@ sims = [
 q = [1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0]
 e_ref = [0.0, 0.053, 0.097, 0.189, 0.192, 0.0, 0.044, 0.097, 0.185, 0.0, 0.093, 0.18]
 
-training = glassware(
+training = fit_waveform_eccentricity(
     q=q,
     names=sims,
     e_ref=e_ref,
-    outfname="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/pyrexdata.pkl",
+    outfname="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/test_new.pkl",
 )

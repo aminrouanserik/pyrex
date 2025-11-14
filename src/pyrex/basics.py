@@ -1,7 +1,8 @@
 import pickle
-import numpy as np
-from scipy.interpolate import interp1d, RBFInterpolator
 import statistics
+
+import numpy as np
+from scipy.interpolate import RBFInterpolator, interp1d
 
 
 def read_pkl(file_dir: str) -> any:
@@ -16,18 +17,6 @@ def read_pkl(file_dir: str) -> any:
     with open(file_dir, "rb") as f:
         data = pickle.load(f)
     return data
-
-
-def write_pkl(outfname: str, data_dict: dict) -> None:
-    """Writes a dictionary to a pickle file in a specified directory.
-
-    Args:
-        outfname (str): Path to the file to write to.
-        data_dict (dict): Dictionary to write to the file.
-    """
-    f = open(outfname, "wb")
-    pickle.dump(data_dict, f)
-    f.close()
 
 
 def interp1D(

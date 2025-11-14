@@ -1,4 +1,4 @@
-from pyrex.main import glassware
+from pyrex.eccentric_fit import glassware
 
 sims = [
     "SXS:BBH:0069",

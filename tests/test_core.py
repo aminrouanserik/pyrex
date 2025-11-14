@@ -1,9 +1,10 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 from qcextender.waveform import Waveform
-from pyrex.main import *
+
 from pyrex.core import *
+from pyrex.eccentric_fit import *
 
 sim = "SXS:BBH:1155"
 dimensionless = DimensionlessWaveform.from_sim(sim)

@@ -1,6 +1,6 @@
 import numpy as np
-from scipy.optimize import curve_fit
 from scipy.interpolate import make_interp_spline
+from scipy.optimize import curve_fit
 
 
 def interp_omega(
@@ -88,29 +88,6 @@ def calculate_x(
 def get_noncirc_params(
     somedict: dict,
 ) -> tuple[list[float], list[float], list[float], list[list[any]], list[list[any]]]:
-    """Extracts and organizes non-circular waveform fitting parameters from a results dictionary.
-
-    Args:
-        somedict (dict): Dictionary containing fitted parameter results. Must include the following keys:
-            - "q" (float): Mass ratio.
-            - "e_ref" (float): Reference eccentricity.
-            - "x" (float): Dimensionless post-Newtonian parameter or time reference.
-            - "A_omega", "B_omega", "freq_omega", "phi_omega" (float or list[float]):
-              Frequency fit parameters.
-            - "A_amp", "B_amp", "freq_amp", "phi_amp" (float or list[float]):
-              Amplitude fit parameters.
-
-    Returns:
-        tuple[list[float], list[float], list[float], list[list[any]], list[list[any]]]: A tuple containing:
-            - ecc_q (list[float]): Mass ratio values.
-            - ecc_e (list[float]): Reference eccentricity values.
-            - ecc_x (list[float]): PN or time parameter values.
-            - par_omega (list[list[any]]): Lists of frequency-related fit parameters
-              [A_omega, B_omega, freq_omega, phi_omega].
-            - par_amp (list[list[any]]): Lists of amplitude-related fit parameters
-              [A_amp, B_amp, freq_amp, phi_amp].
-    """
-
     ecc_q = somedict["q"]
     ecc_e = somedict["e_ref"]
     ecc_x = somedict["x"]
