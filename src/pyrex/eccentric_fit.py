@@ -6,9 +6,10 @@ from gw_eccentricity import measure_eccentricity
 from numpy.typing import NDArray
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 from scipy.interpolate import make_interp_spline
+from scipy.optimize import curve_fit
 from scipy.signal import savgol_filter
 
-from pyrex.tools import calculate_x, fit_sin
+from pyrex.functions import f_sin
 
 
 def fit_waveform_eccentricity(
@@ -162,19 +163,40 @@ def fitting_eccentric_function(
 ) -> NDArray[np.floating]:
     x = (circ_X) ** power - (circ_X[0]) ** power
     y = ecc_X
-    par, _ = fit_sin(x, y)
+    par = fit_sin(x, y)
     return par
 
 
 def write_pkl(
     outfname: str, data_dict: dict[str, NDArray[np.floating] | list[float]]
 ) -> None:
-    """Writes a dictionary to a pickle file in a specified directory.
-
-    Args:
-        outfname (str): Path to the file to write to.
-        data_dict (dict): Dictionary to write to the file.
-    """
     f = open(outfname, "wb")
     pickle.dump(data_dict, f)
     f.close()
+
+
+def fit_sin(
+    xdata: NDArray[np.floating], ydata: NDArray[np.floating]
+) -> NDArray[np.floating]:
+    lower_bounds = [-np.inf, 0.0, -np.inf, -np.inf]
+    upper_bounds = [np.inf, 1e-2, np.inf, np.inf]
+
+    popt, _ = curve_fit(
+        f_sin,
+        xdata,
+        ydata,
+        p0=[0.1, 5e-4, 0.1, -2000],
+        bounds=(lower_bounds, upper_bounds),
+    )
+
+    return popt
+
+
+def calculate_x(
+    old_time: NDArray[np.floating],
+    omega: NDArray[np.floating],
+    new_time: NDArray[np.floating],
+) -> float:
+    interp_omega = make_interp_spline(old_time, omega)
+    x = interp_omega(new_time[0]) ** (2 / 3)
+    return x

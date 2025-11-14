@@ -1,11 +1,14 @@
+import pickle
+
 import numpy as np
+from numpy.typing import NDArray
 from qcextender import units
 from qcextender.waveform import Waveform
 from scipy import integrate
+from scipy.interpolate import RBFInterpolator, interp1d
 from scipy.signal import savgol_filter
 
-from pyrex.basics import interp1D, interpolate_quantities, read_pkl
-from pyrex.tools import f_sin, get_noncirc_params
+from pyrex.functions import f_sin
 
 
 def main(
@@ -15,16 +18,6 @@ def main(
     cut: bool = True,
     **kwargs,
 ) -> Waveform:
-    """Generates a qcextender Waveform object and returns with added eccentricity modulations.
-
-    Args:
-        approximant (str): Quasi-circular approximant to generate the initial Waveform with.
-        mode (list[tuple[int, int]]): Which mode to generate and add eccentricity modulations to.
-        cut (bool, optional): cut decides whether to cut the resulting waveform at -1500M. Defaults to True.
-
-    Returns:
-        Waveform: Waveform object with added eccentricity modulations.
-    """
     eccentricity = kwargs.pop("eccentricity")
     if eccentricity == 0:
         eccentricity = 1e-30
@@ -45,23 +38,11 @@ def main(
 def construct(
     wave: Waveform,
     mode: tuple[int, int],
-    training_dict: dict,
+    training_dict: dict[str, NDArray[np.floating] | list[float]],
     q: float,
     eccentricity: float,
     cut: bool,
-) -> tuple[np.ndarray]:
-    """Constrcuts a new Waveform strain by adding eccentricity to the inspiral and connects it to the original circular merger.
-
-    Args:
-        wave (Waveform): Quasi-circular Waveform to add eccentricity to.
-        mode (tuple[int, int]): Mode, unused but required for Waveform.add_eccentricity().
-        q (float): Mass ratio of the binary, always above 1.
-        eccentricity (float): Eccentricity to be added to the quasi-circular waveform.
-        cut (bool): cut decides whether to cut the resulting waveform at -1500M.
-
-    Returns:
-        tuple[np.ndarray]: The time, phase and amplitude of the new, eccentric Waveform.
-    """
+) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]:
     # masked_waveform returns one extra index to allow for phase alignment
     early_time, amp_rec, phase_rec, mask = eccentric_from_circular(
         wave, training_dict, q, eccentricity, cut
@@ -91,16 +72,9 @@ def construct(
     return time_construct, phase_construct, amp_construct
 
 
-def sliced_waveform(wave: Waveform, index: int) -> tuple[np.ndarray]:
-    """Returns an array starting at the specified index with a corresponding phase and amplitude.
-
-    Args:
-        wave (Waveform): The Waveform to be sliced.
-        index (np.ndarray): The index to slice the waveform at.
-
-    Returns:
-        tuple[np.ndarray]: A tuple of the sliced time and corresponding amplitude and phase.
-    """
+def sliced_waveform(
+    wave: Waveform, index: int
+) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]:
     time = wave.time
 
     near_merger_time = time[index:]
@@ -111,26 +85,18 @@ def sliced_waveform(wave: Waveform, index: int) -> tuple[np.ndarray]:
 
 def eccentric_from_circular(
     wave: Waveform,
-    training_dict: dict,
+    training_dict: dict[str, NDArray[np.floating] | list[float]],
     q: float,
     eccentricity: float,
     cut: bool,
     phase_pwr: float = -59.0 / 24,
     amp_pwr: float = -83.0 / 24,
-) -> tuple[np.ndarray]:
-    """
-
-    Args:
-        wave (Waveform): Quasi-circular Waveform to add eccentricity to.
-        q (float): Mass ratio of the binary, always above 1.
-        eccentricity (float): Eccentricity to be added to the quasi-circular waveform.
-        cut (bool): cut decides whether to cut the resulting waveform at -1500M.
-        phase_pwr (float, optional): Power in the power law for the phase modulations. Defaults to -59.0/24.
-        amp_pwr (float, optional): Power in the power law for the amplitude modulations. Defaults to -83.0/24.
-
-    Returns:
-        tuple[np.ndarray]: A tuple of the masked time and corresponding amplitude and phase including eccentricity modulations.
-    """
+) -> tuple[
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    tuple[NDArray[np.intp], ...],
+]:
     time = units.tSI_to_tM(wave.time, wave.metadata.total_mass)
     omega = units.fSI_to_fM(wave.omega(), wave.metadata.total_mass)
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
@@ -183,20 +149,11 @@ def eccentric_from_circular(
 
 
 def get_fit_params(
-    training_dict: dict, q: float, eccentricity: float, x: float
-) -> tuple[list]:
-    """Gets fit parameters for the sinusoidal eccentricity modulation fits.
-
-    Args:
-        training_dict (dict): Dictionary with all fit parameters.
-        q (float): Mass ratio of the binary, always above 1.
-        eccentricity (float): Eccentricity to be added to the quasi-circular waveform.
-        x (float): Dimensionless variable x at the start of the waveform.
-
-    Returns:
-        tuple[list]: The parameters for the omega and amplitude keys.
-    """
-
+    training_dict: dict[str, NDArray[np.floating] | list[float]],
+    q: float,
+    eccentricity: float,
+    x: float,
+) -> tuple[list[float], list[float]]:
     train_q, train_ecc, train_x, omega, amp = get_noncirc_params(training_dict)
 
     training_quant = [train_q, train_ecc, train_x]
@@ -216,27 +173,18 @@ def get_fit_params(
 
 
 def interpol_key_quant(
-    training_quant: list[list], training_keys: list[list], test_quant: list[list]
+    training_quant: list[list[float]],
+    training_keys: list[NDArray[np.floating]],
+    test_quant: list[float],
 ) -> tuple[float, float, float, float]:
-    """Returns the interpolated fit parameters.
-
-    Args:
-        training_quant (list[list]): Lists of mass ratios, eccentricities and starting x during training.
-        training_keys (list[list]): List of omega or amplitude of simulations during training.
-        test_quant (list[list]): Quantities requested.
-
-    Returns:
-        tuple[float, float, float, float]: Interpolated fit parameters, amplitude, power, frequency, and phase.
-    """
-    A = float(
-        interpolate_quantities(
-            training_quant[1],
-            training_quant[0],
-            np.abs(training_keys[0]),
-            test_quant[1],
-            test_quant[0],
-        )
+    A = interpolate_quantities(
+        training_quant[1],
+        training_quant[0],
+        np.abs(training_keys[0]),
+        test_quant[1],
+        test_quant[0],
     )
+
     B = np.log(
         interpolate_quantities(
             training_quant[1],
@@ -259,31 +207,19 @@ def interpol_key_quant(
             )
         )
     )
-    phi = float(
-        interp1D(
-            np.asarray(training_quant[2]),
-            np.asarray(training_keys[3]),
-            np.asarray(test_quant[2]),
-        )
+    phi = interp1D(
+        np.asarray(training_quant[2]),
+        np.asarray(training_keys[3]),
+        test_quant[2],
     )
 
     e = test_quant[1]
     A = A * (e / (e + 1e-6))
 
-    return A, B, freq, phi
+    return float(A), float(B), float(freq), float(phi)
 
 
 def smooth_joint(time: np.ndarray, y: np.ndarray, total_mass: float) -> np.ndarray:
-    """Uses the Savitzky-Golay filter to smoothen the transition area from eccentric to quasi-circular.
-
-    Args:
-        time (np.ndarray): The time array.
-        y (np.ndarray): Quantity to smoothen, either phase or amplitude.
-        total_mass (float): The total mass of the inspiral.
-
-    Returns:
-        np.ndarray: The filtered phase or amplitude.
-    """
     tarray = np.where(
         (time < units.tM_to_tSI(-25, total_mass))
         & (time >= units.tM_to_tSI(-46, total_mass))
@@ -294,6 +230,72 @@ def smooth_joint(time: np.ndarray, y: np.ndarray, total_mass: float) -> np.ndarr
     y[first:last] = np.interp(
         time[first:last], [time[first], time[last]], [y[first], y[last]]
     )
-    # # y[first:last] = savgol_filter(y[first:last], 9, 3)
+
     y_inter = savgol_filter(y, 31, 3)
     return y_inter
+
+
+def read_pkl(file_dir: str) -> dict[str, NDArray[np.floating] | list[float]]:
+    with open(file_dir, "rb") as f:
+        data = pickle.load(f)
+    return data
+
+
+def interp1D(
+    trainkey: NDArray[np.floating], trainval: NDArray[np.floating], testkey: float
+) -> float:
+    newkey, newval = check_duplicate_training(list(trainkey), list(trainval))
+
+    if testkey < min(trainkey) or testkey > max(trainkey):
+        interp = interp1d(newkey, newval, fill_value="extrapolate")
+    else:
+        interp = interp1d(newkey, newval)
+    return interp(testkey)
+
+
+def interpolate_quantities(eccentricities, mass_ratios, interpolant_values, e, q):
+    coordinates = np.array([eccentricities, mass_ratios]).T
+    interpolator = RBFInterpolator(coordinates, interpolant_values, kernel="linear")
+    return interpolator(np.column_stack([np.atleast_1d(e), np.atleast_1d(q)])).squeeze()
+
+
+def check_duplicate_training(
+    trainkey: list[float], trainval: list[float]
+) -> tuple[list[float], list[float]]:
+    d = {}
+    newkey = []
+    newval = []
+
+    for a, b in zip(trainkey, trainval):
+        d.setdefault(a, []).append(b)
+
+    for key in d:
+        newkey.append(key)
+        newval.append(np.median(d[key]))
+    return newkey, newval
+
+
+def get_noncirc_params(
+    somedict: dict,
+) -> tuple[
+    list[float],
+    list[float],
+    list[float],
+    list[NDArray[np.floating]],
+    list[NDArray[np.floating]],
+]:
+    ecc_q = somedict["q"]
+    ecc_e = somedict["e_ref"]
+    ecc_x = somedict["x"]
+    ecc_A_omega = somedict["A_omega"]
+    ecc_B_omega = somedict["B_omega"]
+    ecc_freq_omega = somedict["freq_omega"]
+    ecc_phi_omega = somedict["phi_omega"]
+    ecc_A_amp = somedict["A_amp"]
+    ecc_B_amp = somedict["B_amp"]
+    ecc_freq_amp = somedict["freq_amp"]
+    ecc_phi_amp = somedict["phi_amp"]
+
+    par_omega = [ecc_A_omega, ecc_B_omega, ecc_freq_omega, ecc_phi_omega]
+    par_amp = [ecc_A_amp, ecc_B_amp, ecc_freq_amp, ecc_phi_amp]
+    return ecc_q, ecc_e, ecc_x, par_omega, par_amp
