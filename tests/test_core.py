@@ -3,8 +3,7 @@ import numpy as np
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 from qcextender.waveform import Waveform
 
-from pyrex.core import *
-from pyrex.eccentric_fit import *
+from pyrex.eccentric_extension import generate_eccentric_waveform
 
 sim = "SXS:BBH:1155"
 dimensionless = DimensionlessWaveform.from_sim(sim)
@@ -44,8 +43,8 @@ kwargs = {
     "eccentricity": 0.2,
 }
 
-phen_ecc = main("IMRPhenomD", [(2, 2)], **kwargs)
-seob_ecc = main("SEOBNRv4", [(2, 2)], **kwargs)
+phen_ecc = generate_eccentric_waveform("IMRPhenomD", [(2, 2)], **kwargs)
+seob_ecc = generate_eccentric_waveform("SEOBNRv4", [(2, 2)], **kwargs)
 
 print(seob.match(seob_ecc))
 print(phenom.match(phen_ecc))

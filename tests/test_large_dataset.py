@@ -1,4 +1,4 @@
-from pyrex.eccentric_fit import glassware
+from pyrex.eccentric_fit import fit_waveform_eccentricity
 
 sims = [
     "SXS:BBH:0069",
@@ -186,7 +186,7 @@ zerosims = [
 sims.extend(zerosims)
 
 
-training = glassware(
+training = fit_waveform_eccentricity(
     names=sims,
-    outfname="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/pyrexdata.pkl",
+    outfname="/home/amin/Projects/School/Masters/25_26-Thesis/pyrex/data/all_data.pkl",
 )

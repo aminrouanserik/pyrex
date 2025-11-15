@@ -1,5 +1,3 @@
-import matplotlib.pyplot as plt
-import numpy as np
 from gw_eccentricity import measure_eccentricity
 from qcextender.dimensionlesswaveform import DimensionlessWaveform
 
