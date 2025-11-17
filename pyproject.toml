@@ -1,6 +1,6 @@
 [project]
 name = "pyrex"
-version = "0.6.2"
+version = "0.7.0"
 description = "Adding eccentricity to quasi-circular waveforms."
 readme = "README.md"
 authors = [{ name = "Amin Rouan Serik", email = "aminrouanserik@gmail.com" }]

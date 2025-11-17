@@ -37,7 +37,7 @@ from pyrex.functions import f_sin
 def generate_eccentric_waveform(
     approximant: str,
     mode: list[tuple[int, int]],
-    dirfile: str = "../examples/sample_data/pyrexdata.pkl",
+    dirfile: str = "examples/sample_data/pyrexdata.pkl",
     cut: bool = True,
     **kwargs,
 ) -> Waveform:
@@ -61,7 +61,7 @@ def generate_eccentric_waveform(
             List of `(l, m)` harmonic modes to generate for the base waveform.
         dirfile (str, optional):
             Path to the pickle file containing the eccentricity-interpolation
-            training dictionary. Defaults to `"../data/pyrexdata.pkl"`.
+            training dictionary. Defaults to `"../examples/sample_data/pyrexdata.pkl"`.
         cut (bool, optional):
             Whether to truncate or condition the waveform after the
             eccentricity correction step at -1500M. Defaults to `True`.
@@ -85,6 +85,12 @@ def generate_eccentric_waveform(
     eccentricity = kwargs.pop("eccentricity")
     if eccentricity == 0:
         eccentricity = 1e-30
+    elif eccentricity > 1:
+        raise ValueError(
+            "An eccentricity above 1 is not physical, please change this parameter."
+        )
+    elif eccentricity > 0.2:
+        raise Warning("This eccentricity is beyond the calibration range.")
     wave = Waveform.from_model(approximant, mode, **kwargs)
 
     training_dict = read_pkl(dirfile)
