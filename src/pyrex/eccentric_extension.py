@@ -37,7 +37,7 @@ from pyrex.functions import f_sin
 def generate_eccentric_waveform(
     approximant: str,
     mode: list[tuple[int, int]],
-    dirfile: str = "../data/pyrexdata.pkl",
+    dirfile: str = "../examples/sample_data/pyrexdata.pkl",
     cut: bool = True,
     **kwargs,
 ) -> Waveform:
