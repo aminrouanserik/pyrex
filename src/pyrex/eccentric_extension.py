@@ -171,6 +171,8 @@ def construct(
     phase_construct = np.concatenate((phase_rec, late_phase[1:]))
     time_construct = np.concatenate((early_time, late_time[1:]))
 
+    assert wave.metadata.total_mass is not None
+
     # Necessary now before solving ivp
     amp_construct = smooth_joint(
         time_construct,
@@ -279,9 +281,15 @@ def eccentric_from_circular(
             - `mask`: A tuple of index arrays used to select the portion of the
               circular waveform on which eccentric corrections were applied.
     """
+    assert wave.metadata.total_mass is not None
+    assert wave.metadata.distance is not None
+
     time = units.tSI_to_tM(wave.time, wave.metadata.total_mass)
     omega = units.fSI_to_fM(wave.omega(), wave.metadata.total_mass)
     amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
+
+    # assert isinstance(time, np.ndarray)
+    assert isinstance(omega, np.ndarray)
 
     # Lower bound dependent on the fit, in this case -1500
     if cut:
@@ -327,7 +335,7 @@ def eccentric_from_circular(
             amp_rec, wave.metadata.total_mass, wave.metadata.distance
         )
 
-    return new_time, amp_rec, phase_rec, mask
+    return new_time, amp_rec, phase_rec, mask  # type: ignore
 
 
 def get_fit_params(
@@ -508,7 +516,7 @@ def interp1D(
     newkey, newval = check_duplicate_training(list(trainkey), list(trainval))
 
     if testkey < min(trainkey) or testkey > max(trainkey):
-        interp = interp1d(newkey, newval, fill_value="extrapolate")
+        interp = interp1d(newkey, newval, fill_value="extrapolate")  # type: ignore
     else:
         interp = interp1d(newkey, newval)
     return interp(testkey)

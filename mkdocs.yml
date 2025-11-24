@@ -1,0 +1,57 @@
+site_name: Pyrex
+repo_url: https://github.com/aminrouanserik/pyrex
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - content.code.copy
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      primary: purple
+      accent: purple
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      primary: purple
+      accent: purple
+      scheme: default 
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      primary: purple
+      accent: purple
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
+nav:
+  - Home: index.md
+  - Code Reference: reference/
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - docs/reference_generator.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          inventories: []
+          options:
+            show_source: false
+            members_order: alphabetical
+            filters:
+              - "!^_"
+
