@@ -39,6 +39,7 @@ def generate_eccentric_waveform(
     mode: list[tuple[int, int]],
     dirfile: str = "examples/sample_data/pyrexdata.pkl",
     cut: bool = True,
+    one_dimensional: bool = False,
     **kwargs,
 ) -> Waveform:
     """
@@ -100,8 +101,9 @@ def generate_eccentric_waveform(
         "q": wave.metadata.q,
         "eccentricity": eccentricity,
         "cut": cut,
+        "one_dimensional": one_dimensional,
     }
-    newwave = wave.add_eccentricity(construct, kwargs, eccentricity)
+    newwave = wave.add_eccentricity(construct, kwargs, eccentricity)  # type: ignore
     return newwave
 
 
@@ -112,6 +114,7 @@ def construct(
     q: float,
     eccentricity: float,
     cut: bool,
+    one_dimensional: bool,
 ) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]:
     """
     Construct an eccentric waveform segment by stitching together the
@@ -159,7 +162,7 @@ def construct(
     """
     # masked_waveform returns one extra index to allow for phase alignment
     early_time, amp_rec, phase_rec, mask = eccentric_from_circular(
-        wave, training_dict, q, eccentricity, cut
+        wave, training_dict, q, eccentricity, cut, one_dimensional
     )
     late_time, late_amp, late_phase = sliced_waveform(wave, mask[0][-1])
 
@@ -223,6 +226,7 @@ def eccentric_from_circular(
     q: float,
     eccentricity: float,
     cut: bool,
+    one_dimensional: bool,
     phase_pwr: float = -59.0 / 24,
     amp_pwr: float = -83.0 / 24,
 ) -> tuple[
@@ -286,7 +290,7 @@ def eccentric_from_circular(
 
     time = units.tSI_to_tM(wave.time, wave.metadata.total_mass)
     omega = units.fSI_to_fM(wave.omega(), wave.metadata.total_mass)
-    amp = units.mSI_to_mM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
+    amp = units.hSI_to_hM(wave.amp(), wave.metadata.total_mass, wave.metadata.distance)
 
     # assert isinstance(time, np.ndarray)
     assert isinstance(omega, np.ndarray)
@@ -301,7 +305,9 @@ def eccentric_from_circular(
     x = omega[mask][0] ** (2 / 3)
 
     # check requirements
-    par_omega, par_amp = get_fit_params(training_dict, q, eccentricity, x)
+    par_omega, par_amp = get_fit_params(
+        training_dict, q, eccentricity, x, one_dimensional
+    )
 
     if not np.any(omega):
         amp_rec = np.zeros(len(new_time))
@@ -331,7 +337,7 @@ def eccentric_from_circular(
         phase_rec = integrate.cumulative_trapezoid(
             units.fM_to_fSI(-omega_rec, wave.metadata.total_mass), new_time, initial=0
         )
-        amp_rec = units.mM_to_mSI(
+        amp_rec = units.hM_to_hSI(
             amp_rec, wave.metadata.total_mass, wave.metadata.distance
         )
 
@@ -343,6 +349,7 @@ def get_fit_params(
     q: float,
     eccentricity: float,
     x: float,
+    one_dimensional: bool,
 ) -> tuple[list[float], list[float]]:
     """
     Interpolate the precomputed sinusoidal fit parameters for the eccentric
@@ -380,17 +387,18 @@ def get_fit_params(
             These parameter sets can be passed to the sinusoidal reconstruction
             function ``f_sin`` to evaluate eccentric corrections.
     """
+    if one_dimensional:
+        func = interpol_key_quant_1d
+    else:
+        func = interpol_key_quant
+
     train_q, train_ecc, train_x, omega, amp = get_noncirc_params(training_dict)
 
     training_quant = [train_q, train_ecc, train_x]
     test_quant = [q, eccentricity, x]
 
-    A_omega, B_omega, freq_omega, phi_omega = interpol_key_quant(
-        training_quant, omega, test_quant
-    )
-    A_amp, B_amp, freq_amp, phi_amp = interpol_key_quant(
-        training_quant, amp, test_quant
-    )
+    A_omega, B_omega, freq_omega, phi_omega = func(training_quant, omega, test_quant)
+    A_amp, B_amp, freq_amp, phi_amp = func(training_quant, amp, test_quant)
 
     omega_params = [A_omega, B_omega, freq_omega, phi_omega]
     amp_params = [A_amp, B_amp, freq_amp, phi_amp]
@@ -460,6 +468,72 @@ def interpol_key_quant(
     A = A * (e / (e + 1e-6))
 
     return float(A), float(B), float(freq), float(phi)
+
+
+def interpol_key_quant_1d(
+    training_quant: list[list[float]],
+    training_keys: list[NDArray[np.floating]],
+    test_quant: list[float],
+) -> tuple[float, float, float, float]:
+    """
+    Deprecated one-dimensional, now using `interpol_key_quant`. Interpolates
+    the fitted sinusoidal parameters (A, B, freq, phi) for the eccentric
+    correction, given training grids and the target (q, e, x).
+
+    Args:
+        training_quant (list[list[float]]):
+            Lists of training values for mass ratio, eccentricity, and x.
+        training_keys (list[NDArray[np.floating]]):
+            Arrays containing the fitted parameters A, B-related quantity,
+            frequency-related quantity, and phase from training data.
+        test_quant (list[float]):
+            The target values [q, eccentricity, x] at which to interpolate.
+
+    Returns:
+        tuple[float, float, float, float]:
+            The interpolated parameters A, B, freq, and phi.
+    """
+    forA = float(
+        interp1D(
+            np.asarray(training_quant[1]), np.asarray(training_keys[0]), test_quant[1]
+        )
+    )
+    A = float(
+        interp1D(
+            np.asarray(training_quant[1]),
+            abs(np.asarray(training_keys[0])),
+            test_quant[1],
+        )
+    )
+    B = np.log(
+        (
+            interp1D(
+                np.asarray(training_quant[1]),
+                training_keys[0] * np.exp(training_keys[1]),
+                test_quant[1],
+            )
+        )
+        / np.asarray(forA)
+    )
+    freq = np.sqrt(
+        1.0
+        / (
+            interp1D(
+                np.asarray(training_quant[0]),
+                1.0 / np.asarray(training_keys[2]) ** 2,
+                test_quant[0],
+            )
+        )
+    )
+    phi = float(
+        interp1D(
+            np.asarray(training_quant[2]),
+            np.asarray(training_keys[3]),
+            test_quant[2],
+        )
+    )
+
+    return A, float(B), freq, phi
 
 
 def smooth_joint(

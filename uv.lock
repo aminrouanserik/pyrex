@@ -1903,7 +1903,7 @@ wheels = [
 
 [[package]]
 name = "pyrex"
-version = "0.8.0"
+version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "gw-eccentricity" },
@@ -1930,7 +1930,7 @@ requires-dist = [
     { name = "gw-eccentricity", specifier = ">=2.0.0,<3.0.0" },
     { name = "pickleshare", specifier = ">=0.7.5,<0.8.0" },
     { name = "pycbc", specifier = ">=2.9.0,<3.0.0" },
-    { name = "qcextender", path = "qcextender-0.4.1.tar.gz" },
+    { name = "qcextender", path = "qcextender-0.4.6.tar.gz" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
 ]
 
@@ -2082,8 +2082,8 @@ wheels = [
 
 [[package]]
 name = "qcextender"
-version = "0.4.1"
-source = { path = "qcextender-0.4.1.tar.gz" }
+version = "0.4.6"
+source = { path = "qcextender-0.4.6.tar.gz" }
 dependencies = [
     { name = "gwpy" },
     { name = "lalsuite" },
@@ -2091,13 +2091,13 @@ dependencies = [
     { name = "pycbc" },
     { name = "sxs" },
 ]
-sdist = { hash = "sha256:05aa4d0424162df458cff6d771b5188cb87cb3e5a10100024065d0509e3399df" }
+sdist = { hash = "sha256:361659b71f93e098ec4da7a63e534d38e64b7eb98d91374746f30601c4182d57" }
 
 [package.metadata]
 requires-dist = [
     { name = "gwpy", specifier = ">=3.0.13" },
     { name = "lalsuite", specifier = ">=7.26.1" },
-    { name = "phenomxpy", specifier = ">=0.1.1" },
+    { name = "phenomxpy" },
     { name = "pycbc", specifier = ">=2.9.0" },
     { name = "sxs", specifier = ">=2025.0.12" },
 ]

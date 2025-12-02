@@ -1,6 +1,6 @@
 [project]
 name = "pyrex"
-version = "0.8.0"
+version = "0.9.0"
 description = "Adding eccentricity to quasi-circular waveforms."
 readme = "README.md"
 authors = [{ name = "Amin Rouan Serik", email = "aminrouanserik@gmail.com" }]
@@ -42,7 +42,7 @@ addopts = "-v"
 testpaths = ["tests"]
 
 [tool.uv.sources]
-qcextender = { path = "qcextender-0.4.1.tar.gz" }
+qcextender = { path = "qcextender-0.4.6.tar.gz" }
 
 [project.urls]
 Homepage = "https://github.com/aminrouanserik/pyrex"
