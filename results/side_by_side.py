@@ -45,19 +45,19 @@ phen_ecc = cut(
 
 fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
-axes[0].plot(phen_ecc.time, phen_ecc[2, 2], label="IMRPhenomT_Pyrex")
+axes[0].plot(phen_ecc.time, phen_ecc[2, 2], label="IMRPhenomTPyrex")
 axes[0].plot(phen.time, phen[2, 2], label="IMRPhenomTE")
 axes[0].set_ylabel("Strain (m)")
 axes[0].set_xlabel("Time (s)")
 axes[0].legend()
 
-axes[1].plot(phen_ecc.time, phen_ecc.phase(), label="IMRPhenomT_Pyrex")
+axes[1].plot(phen_ecc.time, phen_ecc.phase(), label="IMRPhenomTPyrex")
 axes[1].plot(phen.time, phen.phase(), label="IMRPhenomTE")
 axes[1].set_ylabel("Phase (rad)")
 axes[1].set_xlabel("Time (s)")
 axes[1].legend()
 
-axes[2].plot(phen_ecc.time, phen_ecc.amp(), label="IMRPhenomT_Pyrex")
+axes[2].plot(phen_ecc.time, phen_ecc.amp(), label="IMRPhenomTPyrex")
 axes[2].plot(phen.time, phen.amp(), label="IMRPhenomTE")
 axes[2].set_ylabel("Amplitude (m)")
 axes[2].set_xlabel("Time (s)")

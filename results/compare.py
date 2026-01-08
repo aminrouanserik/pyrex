@@ -87,7 +87,7 @@ plt.imshow(
         vmax=np.nanmax(mismatches),
     ),
 )
-plt.colorbar(label="Mismatch")
+plt.colorbar(label=r"$_{10}\log(\mathcal{M}$)")
 plt.xlabel(r"Total Mass [M$_{\odot}$]")
 plt.ylabel(r"$e_{gw}$")
 plt.title("Mismatch between IMRPhenomT and IMRPhenomTE")

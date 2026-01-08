@@ -24,7 +24,7 @@ for i, e in enumerate(eccentricities):
         grid[i, j] = par_omega_1d[1]
         grid2[i, j] = par_omega_2d[1]
 
-fig, axes = plt.subplots(1, 2, figsize=(14, 7), sharey=True)
+fig, axes = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
 
 im1 = axes[0].imshow(
     grid,
@@ -38,10 +38,10 @@ im1 = axes[0].imshow(
     ],
     cmap="cividis",
 )
-axes[0].set_title(r"B$_\omega$ 1-Dimensional Interpolation")
+axes[0].set_title("1-Dimensional Interpolation")
 axes[0].set_xlabel(r"$q$")
 axes[0].set_ylabel(r"$e_{gw}$")
-fig.colorbar(im1, ax=axes[0])
+fig.colorbar(im1, ax=axes[0], location="bottom", label=r"B$_\omega$")
 
 im2 = axes[1].imshow(
     grid2,
@@ -55,9 +55,9 @@ im2 = axes[1].imshow(
     ],
     cmap="cividis",
 )
-axes[1].set_title(r"B$_\omega$ 2-Dimensional Interpolation")
+axes[1].set_title("2-Dimensional Interpolation")
 axes[1].set_xlabel(r"$q$")
-fig.colorbar(im2, ax=axes[1])
+fig.colorbar(im2, ax=axes[1], location="bottom", label=r"B$_\omega$")
 
 plt.tight_layout()
 plt.show()

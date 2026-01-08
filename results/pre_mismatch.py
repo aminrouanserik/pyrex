@@ -103,9 +103,9 @@ plt.imshow(
         vmax=np.nanmax(mismatches),
     ),
 )
-plt.colorbar(label="Mismatch")
-plt.xlabel("Total Mass [M☉]")
-plt.ylabel("Eccentricity")
-plt.title("Mismatch Heatmap: IMRPhenomD Eccentric vs Circular")
+plt.colorbar(label=r"$_{10}\log(\mathcal{M}$)")
+plt.xlabel(r"Total Mass [M$_{\odot}$]")
+plt.ylabel(r"$e_{gw}$")
+plt.title("Mismatch between IMRPhenomTE and IMRPhenomTPyrex")
 plt.tight_layout()
 plt.show()
