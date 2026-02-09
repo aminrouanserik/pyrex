@@ -214,7 +214,7 @@ def construct_lookup(
     circ_lookup = {}
     for c in circ_waves:
         time = c.time
-        mask = (time > (time[0] + 250)) & (time <= -29)
+        mask = (time >= -1500) & (time <= -29)
         t = time[mask]
         omega = c.omega()[mask]
         amp = c.amp()[mask]
@@ -257,7 +257,7 @@ def get_e_X(
     Returns:
         NDArray[np.floating]: The eccentric contribution to X, the amplitude or instantaneous frequency.
     """
-    mask = (wave.time > (wave.time[0] + 250)) & (wave.time <= -29)
+    mask = (wave.time >= -1500) & (wave.time <= -29)
     ecc_interp = make_interp_spline(wave.time[mask], get_component(wave)[mask])
     ecc_vals = ecc_interp(new_time)
 

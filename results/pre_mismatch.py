@@ -91,12 +91,12 @@ plt.imshow(
     mismatches,
     origin="lower",
     aspect="auto",
-    extent=[
+    extent=(
         total_masses.min(),
         total_masses.max(),
         eccentricities.min(),
         eccentricities.max(),
-    ],
+    ),
     cmap="viridis",
     norm=colors.LogNorm(
         vmin=np.nanmin(mismatches[mismatches > 0]),  # avoid log(0)

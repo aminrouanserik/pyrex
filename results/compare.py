@@ -57,7 +57,7 @@ for i, e in enumerate(eccentricities):
             "mass2": mass2,
             "eccentricity": e,
             "distance": distance,
-            "delta_t": 1.0 / 5000,
+            "delta_t": 1.0 / 4096,
             "f_ref": f_lower,
             "f_lower": f_lower,
         }

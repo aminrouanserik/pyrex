@@ -20,14 +20,14 @@ def cut(wave):
 
 
 kwargs = {
-    "mass1": 20,
-    "mass2": 20,
+    "mass1": 30,
+    "mass2": 30,
     "inclination": 0,
     "coa_phase": 0,
-    "delta_t": 1.0 / 16000,
-    "f_lower": 20,
+    "delta_t": 1.0 / 4096,
+    "f_lower": 10,
     "f_ref": 20,
-    "distance": 10,
+    "distance": 100,
     "eccentricity": 0.093,
 }
 

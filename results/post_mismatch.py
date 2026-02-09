@@ -76,8 +76,6 @@ for i, e in enumerate(eccentricities):
             "examples/sample_data/pyrexdata_egw.pkl",
             **kwargs,
         )
-
-        # kwargs.pop("eccentricity")
         phen_circ = cut(Waveform.from_model("IMRPhenomTE", [(2, 2)], **kwargs))
         try:
             mismatches[i, j] = 1 - phen_ecc.match(phen_circ, f_lower)

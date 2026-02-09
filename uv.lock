@@ -1914,6 +1914,7 @@ dependencies = [
     { name = "setuptools" },
     { name = "tqdm" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/3e/bd821e5760ceab12de6607a4a385e78f301951531c2453b21e167484e966/pycbc-2.10.0.tar.gz", hash = "sha256:3c1034e4089d256936c4d80f9c1fa1348c1ff604357a47a4beffbcac2c135edf", size = 3595057, upload-time = "2026-01-07T15:59:25.808Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c6/c4/b8f34f429f12483e0556cec62d2b8cf082becff61ff5f6ec9c0583633f4a/pycbc-2.10.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:1b6bff88e012d43fe96329119dab027645380eb7fb816f58095b172a3bf27c2f", size = 4644738, upload-time = "2025-10-26T15:31:50.801Z" },
     { url = "https://files.pythonhosted.org/packages/03/9f/ffd5d7777d94502a3ab12c72f40415179c39e88b5dc28194c3f8e3b27946/pycbc-2.10.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:280980577b37bb882b3b1a15046aaa5faf0cda798afd4d34c292f8b024b68a4c", size = 4584420, upload-time = "2025-10-26T15:31:52.542Z" },
@@ -2035,7 +2036,7 @@ requires-dist = [
     { name = "phenomxpy", path = "phenomxpy-0.1.0.tar.gz" },
     { name = "pickleshare", specifier = ">=0.7.5,<0.8.0" },
     { name = "pycbc", specifier = ">=2.9.0,<3.0.0" },
-    { name = "qcextender", specifier = ">=0.4.7" },
+    { name = "qcextender", path = "qcextender-0.4.9.tar.gz" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
 ]
 
@@ -2191,17 +2192,22 @@ wheels = [
 
 [[package]]
 name = "qcextender"
-version = "0.4.7"
-source = { registry = "https://pypi.org/simple" }
+version = "0.4.9"
+source = { path = "qcextender-0.4.9.tar.gz" }
 dependencies = [
     { name = "gwpy" },
     { name = "lalsuite" },
     { name = "pycbc" },
     { name = "sxs" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b0/bb/100c3e6be86504aedf303c6c9385ce422324e7a408357ec0164dfc645c52/qcextender-0.4.7.tar.gz", hash = "sha256:7de6b478f2b5cf1f40b6be404c764d2b8d9da4bca15031dcdb71acea562114ea", size = 16586, upload-time = "2025-12-03T15:23:47.057Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f8/65/4dee40bdaae84b6aa9dabf1f259ec98d6a3c2715c1ce2a04b9b66696f261/qcextender-0.4.7-py3-none-any.whl", hash = "sha256:3623a60c2ac375f41dfdf2e61b22b615f0315b9768253cd9e84c8ed139c2f25d", size = 23942, upload-time = "2025-12-03T15:23:45.828Z" },
+sdist = { hash = "sha256:047246b9d65d3d4854cfce30fce052d90ff670c4e3eccaeb382b05eae5d19d79" }
+
+[package.metadata]
+requires-dist = [
+    { name = "gwpy", specifier = ">=3.0.13" },
+    { name = "lalsuite", specifier = ">=7.26.1" },
+    { name = "pycbc", specifier = ">=2.9.0" },
+    { name = "sxs", specifier = ">=2025.0.12" },
 ]
 
 [[package]]

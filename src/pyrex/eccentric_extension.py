@@ -335,7 +335,7 @@ def eccentric_from_circular(
 
         # Minus sign crucial for circ
         phase_rec = integrate.cumulative_trapezoid(
-            units.fM_to_fSI(-omega_rec, wave.metadata.total_mass), new_time, initial=0
+            units.fM_to_fSI(omega_rec, wave.metadata.total_mass), new_time, initial=0
         )
         amp_rec = units.hM_to_hSI(
             amp_rec, wave.metadata.total_mass, wave.metadata.distance

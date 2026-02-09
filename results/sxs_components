@@ -1,0 +1,32 @@
+import matplotlib.pyplot as plt
+import numpy as np
+from qcextender.dimensionlesswaveform import DimensionlessWaveform
+
+e = DimensionlessWaveform.from_sim("SXS:BBH:1355")
+qc = DimensionlessWaveform.from_sim("SXS:BBH:0180v2.0")
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+
+index = np.abs(qc.time - e.time[0]).argmin()
+
+axes[0].plot(e.time, e.phase(), label="SXS:BBH:1355, eccentric")
+axes[0].plot(
+    qc.time,
+    qc.phase() - qc.phase()[index],
+    label="SXS:BBH:0180v2.0, quasi-circular",
+)
+axes[0].set_xlim(max(e.time[0], qc.time[0]), min(e.time[-1], qc.time[-1]))
+axes[0].set_ylim(e.phase()[-1], 0)
+axes[0].set_ylabel("Phase (rad)")
+axes[0].set_xlabel("Time (s)")
+axes[0].legend()
+
+axes[1].plot(e.time, e.amp(), label="SXS:BBH:1355, eccentric")
+axes[1].plot(qc.time, qc.amp(), label="SXS:BBH:0180v2.0, quasi-circular")
+axes[1].set_xlim(max(e.time[0], qc.time[0]), min(e.time[-1], qc.time[-1]))
+axes[1].set_ylabel("Amplitude (m)")
+axes[1].set_xlabel("Time (s)")
+axes[1].legend()
+
+plt.tight_layout()
+plt.show()
