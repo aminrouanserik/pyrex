@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 from qcextender import units
 from qcextender.waveform import Waveform
@@ -43,25 +44,64 @@ phen_ecc = cut(
     )
 )
 
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+fig, axes = plt.subplots(
+    2, 2, figsize=(12, 7), sharex="col", height_ratios=[5 / 7, 2 / 7]
+)
 
-axes[0].plot(phen_ecc.time, phen_ecc[2, 2], label="IMRPhenomTPyrex")
-axes[0].plot(phen.time, phen[2, 2], label="IMRPhenomTE")
-axes[0].set_ylabel("Strain (m)")
-axes[0].set_xlabel("Time (s)")
-axes[0].legend()
+axes[0, 0].plot(
+    units.tSI_to_tM(phen_ecc.time, 60),
+    phen_ecc.phase(),
+    label=r"$\mathrm{IMRPhenomTPyrex}$",
+)
+axes[0, 0].plot(
+    units.tSI_to_tM(phen.time, 60), phen.phase(), label=r"$\mathrm{IMRPhenomTE}$"
+)
+axes[0, 0].set_ylabel(r"$\phi_{22}$")
+axes[0, 0].set_xlim(units.tSI_to_tM(phen.time, 60)[0], 100)
+axes[0, 0].set_ylim(-10, 160)
+axes[0, 0].set_yticks([0, 40, 80, 120, 160])
+axes[0, 0].xaxis.set_major_locator(mticker.MaxNLocator(6))
 
-axes[1].plot(phen_ecc.time, phen_ecc.phase(), label="IMRPhenomTPyrex")
-axes[1].plot(phen.time, phen.phase(), label="IMRPhenomTE")
-axes[1].set_ylabel("Phase (rad)")
-axes[1].set_xlabel("Time (s)")
-axes[1].legend()
+axes[0, 1].plot(
+    units.tSI_to_tM(phen_ecc.time, 60),
+    units.hSI_to_hM(phen_ecc.amp(), 60, 100),
+    label="IMRPhenomTPyrex",
+)
+axes[0, 1].plot(
+    units.tSI_to_tM(phen.time, 60),
+    units.hSI_to_hM(phen.amp(), 60, 100),
+    label="IMRPhenomTE",
+)
+axes[0, 1].set_ylabel(r"$\mathcal{A}_{22}$")
+axes[0, 1].set_yticks([0, 0.1, 0.2, 0.3, 0.4])
+axes[0, 1].set_xlim(units.tSI_to_tM(phen.time, 60)[0], 100)
+axes[0, 1].xaxis.set_major_locator(mticker.MaxNLocator(6))
 
-axes[2].plot(phen_ecc.time, phen_ecc.amp(), label="IMRPhenomTPyrex")
-axes[2].plot(phen.time, phen.amp(), label="IMRPhenomTE")
-axes[2].set_ylabel("Amplitude (m)")
-axes[2].set_xlabel("Time (s)")
-axes[2].legend()
+axes[1, 0].plot(
+    units.tSI_to_tM(phen.time, 60), phen.phase() - phen_ecc.phase(), label="IMRPhenomTE"
+)
+axes[1, 0].set_ylabel(r"$\Delta\phi_{22}$")
+axes[1, 0].set_xlabel(r"$\mathrm{t}/\mathrm{M}$")
+axes[1, 0].set_xlim(units.tSI_to_tM(phen.time, 60)[0], 100)
+
+axes[1, 1].plot(
+    units.tSI_to_tM(phen_ecc.time, 60),
+    units.hSI_to_hM(phen_ecc.amp(), 60, 100) - units.hSI_to_hM(phen.amp(), 60, 100),
+)
+axes[1, 1].set_ylabel(r"$\Delta \mathcal{A}_{22}$")
+axes[1, 1].set_xlabel(r"$\mathrm{t}/\mathrm{M}$")
+axes[1, 1].set_xlim(units.tSI_to_tM(phen.time, 60)[0], 100)
+
+handles, labels = axes[0, 0].get_legend_handles_labels()
+fig.legend(
+    handles,
+    labels,
+    loc="upper center",
+    bbox_to_anchor=(0.5, 1.055),
+    ncols=2,
+)
+fig.align_ylabels()
+
 
 plt.tight_layout()
 plt.show()
