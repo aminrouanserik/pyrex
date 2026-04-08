@@ -51,7 +51,9 @@ x_amp = qcamp_interp**amp_pwr - shift_amp**amp_pwr
 fig, axes = plt.subplots(1, 2, figsize=(12, 5), constrained_layout=True)
 prop_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
-axes[0].plot(qcomega_interp, e_omega, color=prop_cycle[0], label=r"$\mathrm{Real}$")
+axes[0].plot(
+    qcomega_interp, e_omega, color=prop_cycle[0], label=r"$\mathrm{NR-derived}$"
+)
 axes[0].plot(
     qcomega_interp,
     f_sin(x_omega, e_omega_a, e_omega_b, e_omega_f, e_omega_phi),
@@ -64,7 +66,7 @@ axes[0].set_xlabel(r"$\omega_c$")
 axes[0].set_yticks([-0.06, -0.03, 0, 0.03, 0.06])
 axes[0].xaxis.set_major_locator(ticker.MaxNLocator(6))
 
-axes[1].plot(qcamp_interp, e_amp, color=prop_cycle[0], label=r"Calculated")
+axes[1].plot(qcamp_interp, e_amp, color=prop_cycle[0], label=r"Fit")
 axes[1].plot(
     qcamp_interp,
     f_sin(x_amp, e_amp_a, e_amp_b, e_amp_f, e_amp_phi),
